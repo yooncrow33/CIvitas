@@ -1,4 +1,4 @@
-package com.fw.main.graphics;
+package com.fw.internal.graphics;
 
 import com.fw.main.utils.RU;
 
