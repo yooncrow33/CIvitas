@@ -1,14 +1,14 @@
 package com.fw.main.utils;
 
-import javax.swing.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class Tick {
+public class Time {
 
     private long lastTime;
 
+    private long lastTick;
     private long tick = 0;
 
     private void startGameLoop() {
@@ -20,6 +20,7 @@ public class Tick {
                 long now = System.nanoTime();
                 double deltaTime = (now - lastTime) / 1_000_000_000.0;
                 lastTime = now;
+                tick++;
 
             } catch (Throwable t) {
                 t.printStackTrace();
