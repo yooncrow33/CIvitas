@@ -12,8 +12,8 @@ public class Poly {
     private int y;
 
     public Poly(int x, int y, int xA[], int yA[], Color color) {
-        this.xP = xA;
-        this.yP = yA;
+        this.xP = xA.clone();
+        this.yP = yA.clone();
         this.x = x;
         this.y = y;
         this.color = color;

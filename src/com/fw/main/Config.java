@@ -1,6 +1,6 @@
 package com.fw.main;
 
-public abstract class Config {
+public class Config {
     final String projectName;
     int initWindowWidth;
     int initWindowHeight;

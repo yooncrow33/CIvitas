@@ -22,7 +22,7 @@ public final class Load {
 
     public void addLoadObject(IoObject ioObject) {
         if (loadEnd) {
-            System.err.println(InternalUtils.getTimeFormate() + " / add loadObject to loadObject Array in after load!");
+            System.err.println(InternalUtils.Time.getTimeFormate() + " / add loadObject to loadObject Array in after load!");
             return;
         }
         ioObjects.add(ioObject);
@@ -35,13 +35,13 @@ public final class Load {
     public void load() {
         loadStart = true;
         maxProgress = ioObjects.size();
-        System.out.println(InternalUtils.getTimeFormate() + " / start load");
+        System.out.println(InternalUtils.Time.getTimeFormate() + " / start load");
         for (IoObject l : ioObjects) {
             l.internalLoad();
             progress++;
 
         }
         loadEnd = true;
-        System.out.println(InternalUtils.getTimeFormate() + " / end load");
+        System.out.println(InternalUtils.Time.getTimeFormate() + " / end load");
     }
 }

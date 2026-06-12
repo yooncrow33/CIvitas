@@ -22,7 +22,7 @@ public final class Save {
 
     public void addSaveObject(IoObject ioObject) {
         if (saveEnd) {
-            System.err.println(InternalUtils.getTimeFormate() + " / add saveObject to saveObject Array in after save!");
+            System.err.println(InternalUtils.Time.getTimeFormate() + " / add saveObject to saveObject Array in after save!");
             return;
         }
         ioObjects.add(ioObject);
@@ -35,13 +35,13 @@ public final class Save {
     public void save() {
         saveStart = true;
         maxProgress = ioObjects.size();
-        System.out.println(InternalUtils.getTimeFormate() + " / start save");
+        System.out.println(InternalUtils.Time.getTimeFormate() + " / start save");
         for (IoObject l : ioObjects) {
             l.internalSave();
             progress++;
 
         }
         saveEnd = true;
-        System.out.println(InternalUtils.getTimeFormate() + " / esave");
+        System.out.println(InternalUtils.Time.getTimeFormate() + " / esave");
     }
 }

@@ -21,21 +21,23 @@ public abstract class Base extends JPanel implements IFrameSize {
     public JFrame frame = new JFrame("Forward Swing Program.");
     private ScheduledExecutorService executor;
     private long lastTime;
+    private final Mouse mouse = new Mouse(this);
+    public Mouse getMouse() {return mouse;}
     private final ViewMetrics viewMetrics;
     protected final Io io = new Io();
-    private OperatorManager operatorManager = new OperatorManager();
+    private final OperatorManager operatorManager = new OperatorManager();
 
     public GraphicsComponent loadingComponent = null;
 
-    public Base() {
+    public Base(Builder builder) {
         if (!Core.isIsSetConfig()) {
-            System.err.println("config is null!");
+            System.err.println("config is null! you should init config to Core.java in the static block!");
             System.exit(0);
         }
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.setResizable(true);
 
-        frame.setPreferredSize((new Dimension(1280,720)));
+        frame.setPreferredSize((new Dimension(Core.get().initWindowWidth,Core.get().getInitWindowHeight())));
         setFocusable(true);
 
         viewMetrics = new ViewMetrics(this);
@@ -64,13 +66,15 @@ public abstract class Base extends JPanel implements IFrameSize {
             }
         });
 
-        // ★ 사용자가 창 창닫기(X) 버튼을 눌렀을 때도 exit() 로직이 수행되도록 리스너 추가
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
                 exit();
             }
         });
+
+        Fw.add(builder.integerKey,this);
+        Fw.add(builder.stringKey, this);
 
         init(io, operatorManager);
 
@@ -81,8 +85,34 @@ public abstract class Base extends JPanel implements IFrameSize {
         }).start();
     }
 
+    public static class Builder {
+        String stringKey;
+        Integer integerKey;
+
+        public Builder setStringKey(String stringKey) {
+            this.stringKey = stringKey;
+            return this;
+        }
+
+        public Builder setIntegerKey(Integer integerKey) {
+            this.integerKey = integerKey;
+            return this;
+        }
+    }
+
+    public class Mouse {
+        final Base base;
+
+        public Mouse(Base base) {
+            this.base = base;
+        }
+
+        public int x() {return base.getMouseX();}
+        public int y() {return  base.getMouseY();}
+    }
+
     private void startGameLoop() {
-        System.out.println(InternalUtils.getTimeFormate() + " / thread start");
+        System.out.println(InternalUtils.Time.getTimeFormate() + " / thread start");
         executor = Executors.newSingleThreadScheduledExecutor();
         lastTime = System.nanoTime();
 
@@ -113,7 +143,7 @@ public abstract class Base extends JPanel implements IFrameSize {
     public int getMouseY() {return viewMetrics.getVirtualMouseY();}
 
     public void exit() {
-        System.out.println("Base 인스턴스 종료 시작...");
+        //System.out.println("exit now..");
 
         io.save.save();
         operatorManager.exitOperatorPack.launch();
@@ -128,7 +158,7 @@ public abstract class Base extends JPanel implements IFrameSize {
                 executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
-            System.out.println("스레드가 성공적으로 종료되었습니다.");
+            //System.out.println("exit.");
         }
 
         if (frame != null) {
@@ -155,6 +185,10 @@ public abstract class Base extends JPanel implements IFrameSize {
             renderLoadingScreen(g);
         } else {
             render(g);
+        }
+
+        if (Fw.Debugger.showHitbox) {
+            Fw.Debugger.Internal.renderHitbox(g);
         }
     }
 }
