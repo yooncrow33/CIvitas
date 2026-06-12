@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="KoreanInputTestBro:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/KoreanInputTestBro_jar</output-path>
+    <root id="archive" name="FW.jar">
+      <element id="module-output" name="FW" />
+    </root>
+  </artifact>
+</component>
