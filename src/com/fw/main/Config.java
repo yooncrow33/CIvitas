@@ -16,8 +16,8 @@ public class Config {
 
     public static class Builder {
         final String projectName;
-        int initWindowWidth = 1920;
-        int initWindowHeight = 1080;
+        int initWindowWidth = 1200;
+        int initWindowHeight = 300;
         public Builder(String projectName) {
             this.projectName = projectName;
         }

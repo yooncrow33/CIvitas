@@ -13,7 +13,6 @@ import java.text.AttributedCharacterIterator;
 
 public class Test extends Base {
 
-    // 1. 텍스트를 저장할 변수들
     private final StringBuilder textBuffer = new StringBuilder(); // 완성된 글자들
     private String composingText = ""; // 현재 조합 중인 글자
 
@@ -25,20 +24,19 @@ public class Test extends Base {
         ));
     }
 
-    // ★ [핵심] super()가 호출되기 "직전"과 "직후"에 IME 설정을 확실하게 박아넣기 위한 초기화 블록
     {
-        // 부모 생성자가 실행되기 전에 미리 IME 허용 상태로 세팅 시도
         this.enableInputMethods(true);
     }
 
     public Test() {
         super(new Builder().setIntegerKey(1).setStringKey("1"));
 
-        // 프레임이 다 뜬 후에도 확실하게 다시 한번 IME 활성화 및 포커스 선점
+        new TestBinding(this);
+
         this.enableInputMethods(true);
         this.requestFocusInWindow();
 
-        // IME(한글 조합) 리스너 등록
+        // 1. IME(한글 조합) 리스너
         this.addInputMethodListener(new InputMethodListener() {
             @Override
             public void inputMethodTextChanged(InputMethodEvent event) {
@@ -47,7 +45,7 @@ public class Test extends Base {
                     int committedCharacterCount = event.getCommittedCharacterCount();
                     char c = text.first();
 
-                    // 완성된 글자 처리
+                    // 완성된 한글 처리
                     StringBuilder committed = new StringBuilder();
                     for (int i = 0; i < committedCharacterCount; i++) {
                         committed.append(c);
@@ -55,7 +53,7 @@ public class Test extends Base {
                     }
                     textBuffer.append(committed.toString());
 
-                    // 조합 중인 글자 처리
+                    // 조합 중인 한글 처리
                     StringBuilder composing = new StringBuilder();
                     while (c != AttributedCharacterIterator.DONE) {
                         composing.append(c);
@@ -66,31 +64,66 @@ public class Test extends Base {
                     composingText = "";
                 }
                 event.consume();
-                repaint(); // 즉시 화면 갱신 유도
             }
 
             @Override
-            public void caretPositionChanged(InputMethodEvent event) {
-            }
+            public void caretPositionChanged(InputMethodEvent event) {}
         });
 
-        // 지우기(Backspace) 처리를 위한 키 리스너 등록
+        // 2. 키보드 리스너 (특수문자, 백스페이스, 엔터 처리)
         this.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
+                // 백스페이스 처리
                 if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
                     if (composingText.length() > 0) {
-                        composingText = ""; // 조합 중인 글자 날리기
+                        composingText = "";
                     } else if (textBuffer.length() > 0) {
-                        textBuffer.deleteCharAt(textBuffer.length() - 1); // 완성된 글자 지우기
+                        textBuffer.deleteCharAt(textBuffer.length() - 1);
                     }
                     repaint();
+                }
+
+                // ★ 엔터키 처리
+                else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    // 한글 조합 중이었다면 해당 글자를 완성 버퍼로 강제 이동
+                    if (composingText.length() > 0) {
+                        textBuffer.append(composingText);
+                        composingText = "";
+                    }
+
+                    // 엔터 이벤트 발생 시 실행할 로직 작성
+                    onEnterPressed(textBuffer.toString());
+
+                    repaint();
+                }
+            }
+
+            @Override
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+
+                // 제어 문자(백스페이스, 엔터, 이스케이프 등)는 제외하고
+                // 키보드로 입력되는 특수문자, 영어, 숫자 등을 버퍼에 직접 추가
+                if (c != KeyEvent.CHAR_UNDEFINED && c >= 32 && c != 127) {
+                    // 한글 조합 중이 아닐 때만 키 입력을 직접 받음 (한글은 InputMethodListener가 처리함)
+                    if (composingText.length() == 0) {
+                        textBuffer.append(c);
+                        repaint();
+                    }
                 }
             }
         });
     }
 
-    // 화면에 보여줄 최종 문자열 결합 메서드
+    // ★ 엔터키를 쳤을 때 동작할 커스텀 메서드
+    private void onEnterPressed(String fullText) {
+        System.out.println("전송된 텍스트: " + fullText);
+
+        // 예시: 엔터 치면 입력창 비우기 (원하지 않으면 주석 처리하셈)
+        textBuffer.setLength(0);
+    }
+
     private String getInputText() {
         return textBuffer.toString() + composingText;
     }
@@ -106,29 +139,17 @@ public class Test extends Base {
     }
 
     @Override
-    public void update(double dt) {
-    }
+    public void update(double dt) {}
 
-    // ★ OS에게 IME 입력을 처리하겠다고 증명하는 필수 오버라이드
     @Override
     public java.awt.im.InputMethodRequests getInputMethodRequests() {
         return new java.awt.im.InputMethodRequests() {
-            @Override
-            public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
-
-            @Override
-            public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {
-                // 한글 조합창(밑줄 생기는 미완성 글자 박스)이 뜰 창 기준 절대 좌표
+            @Override public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
+            @Override public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {
                 return new java.awt.Rectangle(50, 130, 0, 0);
             }
-
-            @Override
-            public java.text.AttributedCharacterIterator getSelectedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-
-            @Override
-            public java.text.AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-
-            // 지난번에 누락되었던 필수 구현 값들 채워넣음
+            @Override public java.text.AttributedCharacterIterator getSelectedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
+            @Override public java.text.AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
             @Override public int getCommittedTextLength() { return 0; }
             @Override public int getInsertPositionOffset() { return 0; }
             @Override public java.text.AttributedCharacterIterator cancelLatestCommittedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
@@ -141,8 +162,8 @@ public class Test extends Base {
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
         g.setColor(Color.WHITE);
-        g.setFont(new Font("맑은 고딕", Font.BOLD, 18));
-        g.drawString("한글 입력 테스트 :", 50, 80);
+        g.setFont(new Font("", Font.BOLD, 18));
+        g.drawString("Korean Test :", 50, 80);
 
         // 실시간 타이핑 중인 텍스트 렌더링
         g.setColor(Color.CYAN);

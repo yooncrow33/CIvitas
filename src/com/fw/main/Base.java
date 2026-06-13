@@ -18,7 +18,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public abstract class Base extends JPanel implements IFrameSize {
-    public JFrame frame = new JFrame("Forward Swing Program.");
+    public JFrame frame = new JFrame("Civitas Engine");
     private ScheduledExecutorService executor;
     private long lastTime;
     private final Mouse mouse = new Mouse(this);

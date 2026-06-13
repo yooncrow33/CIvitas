@@ -160,6 +160,9 @@ public abstract class KeyBindingBase {
     }
 
     private void dispatchRelease(KBKey k) {
+        if (keyBindingBaseOption!=null) {
+            if (!keyBindingBaseOption.isOn()) {return;}
+        }
         switch (k) {
             case A -> onKeyARelease();
             case B -> onKeyBRelease();
