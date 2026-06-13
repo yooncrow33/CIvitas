@@ -13,8 +13,8 @@ import java.text.AttributedCharacterIterator;
 
 public class Test extends Base {
 
-    private final StringBuilder textBuffer = new StringBuilder(); // 완성된 글자들
-    private String composingText = ""; // 현재 조합 중인 글자
+    // 외부 클래스로 분리한 Ko 객체 생성
+    private final Ko koComponent = new Ko();
 
     static {
         Core.setConfig(new Config(new
@@ -36,22 +36,30 @@ public class Test extends Base {
         this.enableInputMethods(true);
         this.requestFocusInWindow();
 
-        // 1. IME(한글 조합) 리스너
+        // 테스트를 위해 초기 포커스를 true로 설정 (실제 구현시 필요에 따라 조절)
+        koComponent.setFocused(true);
+
+        // 1. IME(한글/영문 입력) 리스너
         this.addInputMethodListener(new InputMethodListener() {
             @Override
             public void inputMethodTextChanged(InputMethodEvent event) {
+                // 포커스가 가있을 때만 입력을 받음
+                if (!koComponent.isFocused()) {
+                    return;
+                }
+
                 AttributedCharacterIterator text = event.getText();
                 if (text != null) {
                     int committedCharacterCount = event.getCommittedCharacterCount();
                     char c = text.first();
 
-                    // 완성된 한글 처리
+                    // 완성된 글자 (한글 완성 및 한글 모드에서의 영어/숫자/특수문자 처리)
                     StringBuilder committed = new StringBuilder();
                     for (int i = 0; i < committedCharacterCount; i++) {
                         committed.append(c);
                         c = text.next();
                     }
-                    textBuffer.append(committed.toString());
+                    koComponent.getTextBuffer().append(committed.toString());
 
                     // 조합 중인 한글 처리
                     StringBuilder composing = new StringBuilder();
@@ -59,10 +67,11 @@ public class Test extends Base {
                         composing.append(c);
                         c = text.next();
                     }
-                    composingText = composing.toString();
+                    koComponent.setComposingText(composing.toString());
                 } else {
-                    composingText = "";
+                    koComponent.setComposingText("");
                 }
+                repaint();
                 event.consume();
             }
 
@@ -70,45 +79,51 @@ public class Test extends Base {
             public void caretPositionChanged(InputMethodEvent event) {}
         });
 
-        // 2. 키보드 리스너 (특수문자, 백스페이스, 엔터 처리)
+        // 2. 키보드 리스너 (제어 문자 및 영문 모드 직접 입력 처리)
         this.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
+                if (!koComponent.isFocused()) {
+                    return;
+                }
+
                 // 백스페이스 처리
                 if (e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
-                    if (composingText.length() > 0) {
-                        composingText = "";
-                    } else if (textBuffer.length() > 0) {
-                        textBuffer.deleteCharAt(textBuffer.length() - 1);
+                    if (koComponent.getComposingText().length() > 0) {
+                        koComponent.setComposingText("");
+                    } else if (koComponent.getTextBuffer().length() > 0) {
+                        koComponent.getTextBuffer().deleteCharAt(koComponent.getTextBuffer().length() - 1);
                     }
                     repaint();
                 }
 
-                // ★ 엔터키 처리
+                // 엔터키 처리
                 else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    // 한글 조합 중이었다면 해당 글자를 완성 버퍼로 강제 이동
-                    if (composingText.length() > 0) {
-                        textBuffer.append(composingText);
-                        composingText = "";
+                    if (koComponent.getComposingText().length() > 0) {
+                        koComponent.getTextBuffer().append(koComponent.getComposingText());
+                        koComponent.setComposingText("");
                     }
 
-                    // 엔터 이벤트 발생 시 실행할 로직 작성
-                    onEnterPressed(textBuffer.toString());
-
+                    onEnterPressed(koComponent.getInputText());
                     repaint();
                 }
             }
 
             @Override
             public void keyTyped(KeyEvent e) {
+                if (!koComponent.isFocused()) {
+                    return;
+                }
+
                 char c = e.getKeyChar();
 
-                // 제어 문자(백스페이스, 엔터, 이스케이프 등)는 제외하고
-                // 키보드로 입력되는 특수문자, 영어, 숫자 등을 버퍼에 직접 추가
+                // 일반 영어 모드이거나 OS 키 바인딩 간섭을 피하기 위한 직접 입력 처리
                 if (c != KeyEvent.CHAR_UNDEFINED && c >= 32 && c != 127) {
-                    // 한글 조합 중이 아닐 때만 키 입력을 직접 받음 (한글은 InputMethodListener가 처리함)
-                    if (composingText.length() == 0) {
-                        textBuffer.append(c);
+                    // 한글 조합 중이 아닐 때만 KeyTyped의 입력을 누적
+                    if (koComponent.getComposingText().length() == 0) {
+                        // OS 및 IME 상태에 따라 영문이 중복 입력되는 것을 방지하기 위해
+                        // 현재 입력된 문자가 직전 InputMethodListener에 의해 이미 들어가지 않았는지 검증할 수 있습니다.
+                        koComponent.getTextBuffer().append(c);
                         repaint();
                     }
                 }
@@ -116,16 +131,9 @@ public class Test extends Base {
         });
     }
 
-    // ★ 엔터키를 쳤을 때 동작할 커스텀 메서드
     private void onEnterPressed(String fullText) {
         System.out.println("전송된 텍스트: " + fullText);
-
-        // 예시: 엔터 치면 입력창 비우기 (원하지 않으면 주석 처리하셈)
-        textBuffer.setLength(0);
-    }
-
-    private String getInputText() {
-        return textBuffer.toString() + composingText;
+        koComponent.clear(); // 입력창 비우기
     }
 
     @Override
@@ -163,11 +171,11 @@ public class Test extends Base {
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("", Font.BOLD, 18));
-        g.drawString("Korean Test :", 50, 80);
+        g.drawString("Korean/English Test (Focus: " + koComponent.isFocused() + ") :", 50, 80);
 
-        // 실시간 타이핑 중인 텍스트 렌더링
-        g.setColor(Color.CYAN);
-        g.drawString(getInputText() + "_", 50, 130);
+        // Ko 객체로부터 텍스트를 받아와서 렌더링
+        g.setColor(koComponent.isFocused() ? Color.CYAN : Color.GRAY);
+        g.drawString(koComponent.getInputText() + "_", 50, 130);
     }
 
     public static void main(String[] args) {

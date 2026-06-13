@@ -1,11 +1,9 @@
-package com.fw.internal.api.io;
+package com.fw.main.api.io;
 
 import com.fw.internal.utils.InternalUtils;
 
 import javax.swing.*;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Properties;
 
 public abstract class IoObject {

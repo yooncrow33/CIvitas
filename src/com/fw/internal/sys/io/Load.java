@@ -1,16 +1,17 @@
 package com.fw.internal.sys.io;
 
-import com.fw.internal.api.io.IoObject;
+import com.fw.main.api.io.IoObject;
 import com.fw.internal.utils.InternalUtils;
 
 import java.util.ArrayList;
 
 public final class Load {
-    private ArrayList<IoObject> ioObjects = new ArrayList<>();
     private boolean loadStart = false;
     private boolean loadEnd = false;
     private int progress = 0;
     private int maxProgress = 0;
+    final Io io;
+    public Load(Io io) {this.io = io;}
 
     public boolean isLoadEnd() {
         return loadEnd;
@@ -25,7 +26,7 @@ public final class Load {
             System.err.println(InternalUtils.Time.getTimeFormate() + " / add loadObject to loadObject Array in after load!");
             return;
         }
-        ioObjects.add(ioObject);
+        io.ioObjects.add(ioObject);
     }
 
     public float getProgress() {
@@ -34,9 +35,9 @@ public final class Load {
 
     public void load() {
         loadStart = true;
-        maxProgress = ioObjects.size();
+        maxProgress = io.ioObjects.size();
         System.out.println(InternalUtils.Time.getTimeFormate() + " / start load");
-        for (IoObject l : ioObjects) {
+        for (IoObject l : io.ioObjects) {
             l.internalLoad();
             progress++;
 
