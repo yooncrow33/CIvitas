@@ -142,10 +142,14 @@ public abstract class Base extends JPanel implements IFrameSize {
     public int getMouseX() {return viewMetrics.getVirtualMouseX();}
     public int getMouseY() {return viewMetrics.getVirtualMouseY();}
 
+    public void save() {
+        io.save.save();
+    }
+
     public void exit() {
         //System.out.println("exit now..");
 
-        io.save.save();
+        save();
         operatorManager.exitOperatorPack.launch();
 
         if (executor != null && !executor.isShutdown()) {
