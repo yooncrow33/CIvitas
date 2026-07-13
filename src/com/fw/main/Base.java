@@ -13,19 +13,25 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.awt.image.BufferStrategy;
+import java.awt.image.VolatileImage;
 
-public abstract class Base extends JPanel implements IFrameSize {
+public abstract class Base extends Canvas implements IFrameSize {
     public JFrame frame = new JFrame("Civitas Engine");
-    private ScheduledExecutorService executor;
-    private long lastTime;
+
+    private Thread logicThread;
+    private Thread renderThread;
+    private volatile boolean running = false;
+
     private final Mouse mouse = new Mouse(this);
-    public Mouse getMouse() {return mouse;}
+    public Mouse getMouse() { return mouse; }
     private final ViewMetrics viewMetrics;
     protected final Io io = new Io();
     private final OperatorManager operatorManager = new OperatorManager();
+
+    private BufferStrategy bufferStrategy;
+
+    private VolatileImage vramBuffer;
 
     public GraphicsComponent loadingComponent = null;
 
@@ -34,28 +40,30 @@ public abstract class Base extends JPanel implements IFrameSize {
             System.err.println("config is null! you should init config to Core.java in the static block!");
             System.exit(0);
         }
+
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.setResizable(true);
 
-        frame.setPreferredSize((new Dimension(Core.get().initWindowWidth,Core.get().getInitWindowHeight())));
+        this.setPreferredSize(new Dimension(Core.get().initWindowWidth, Core.get().getInitWindowHeight()));
         setFocusable(true);
 
         viewMetrics = new ViewMetrics(this);
 
         frame.add(this);
-        frame.setVisible(true);
-        frame.setFocusable(true);
-        frame.requestFocus();
         frame.pack();
+        frame.setVisible(true);
+        this.requestFocus();
 
         setBackground(Color.BLACK);
-
         viewMetrics.calculateViewMetrics();
+
+        this.createBufferStrategy(2);
+        this.bufferStrategy = this.getBufferStrategy();
 
         this.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                viewMetrics.updateVirtualMouse(e.getX(),e.getY());
+                viewMetrics.updateVirtualMouse(e.getX(), e.getY());
             }
         });
 
@@ -73,12 +81,12 @@ public abstract class Base extends JPanel implements IFrameSize {
             }
         });
 
-        Fw.add(builder.integerKey,this);
+        Fw.add(builder.integerKey, this);
         Fw.add(builder.stringKey, this);
 
         init(io, operatorManager);
 
-        startGameLoop();
+        launch();
 
         new Thread(() -> {
             io.load.load();
@@ -107,29 +115,149 @@ public abstract class Base extends JPanel implements IFrameSize {
             this.base = base;
         }
 
-        public int x() {return base.getMouseX();}
-        public int y() {return  base.getMouseY();}
+        public int x() { return base.getMouseX(); }
+        public int y() { return base.getMouseY(); }
     }
 
-    private void startGameLoop() {
-        System.out.println(InternalUtils.Time.getTimeFormate() + " / thread start");
-        executor = Executors.newSingleThreadScheduledExecutor();
-        lastTime = System.nanoTime();
+    private void launch() {
+        System.out.println(InternalUtils.Time.getTimeFormate() + " / logic thread start");
 
-        executor.scheduleAtFixedRate(() -> {
-            try {
+        running = true;
+        logicThread = new Thread(() -> {
+            long lastTime = System.nanoTime();
+            final double targetFps = 60.0;
+            final long nsPerTick = (long) (1000000000.0 / targetFps);
+
+            while (running) {
                 long now = System.nanoTime();
                 double deltaTime = (now - lastTime) / 1_000_000_000.0;
                 lastTime = now;
-                if (io.load.isLoadEnd()) {
-                    update(deltaTime);
-                }
-            } catch (Throwable t) {
-                t.printStackTrace();
-            }
-            SwingUtilities.invokeLater(this::repaint);
 
-        }, 0, 16, TimeUnit.MILLISECONDS);
+                try {
+                    if (io.load.isLoadEnd()) {
+                        update(deltaTime);
+                    }
+
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
+
+                long timeTaken = System.nanoTime() - now;
+                long timeLeftNs = nsPerTick - timeTaken;
+
+                if (timeLeftNs > 2_000_000) {
+                    try {
+                        Thread.sleep((timeLeftNs - 2_000_000) / 1_000_000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        running = false;
+                    }
+                }
+
+                while (System.nanoTime() - now < nsPerTick) {
+                    Thread.yield();
+                }
+            }
+        });
+
+        logicThread.setName("logicLoop");
+        logicThread.start();
+
+        System.out.println(InternalUtils.Time.getTimeFormate() + " / render thread start");
+
+        running = true;
+        renderThread = new Thread(() -> {
+            long lastTime = System.nanoTime();
+            final double targetFps = 60.0;
+            final long nsPerTick = (long) (1000000000.0 / targetFps);
+
+            while (running) {
+                long now = System.nanoTime();
+                double deltaTime = (now - lastTime) / 1_000_000_000.0;
+                lastTime = now;
+
+                try {
+                    renderLoop();
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                }
+
+                long timeTaken = System.nanoTime() - now;
+                long timeLeftNs = nsPerTick - timeTaken;
+
+                if (timeLeftNs > 2_000_000) {
+                    try {
+                        Thread.sleep((timeLeftNs - 2_000_000) / 1_000_000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        running = false;
+                    }
+                }
+
+                while (System.nanoTime() - now < nsPerTick) {
+                    Thread.yield();
+                }
+            }
+        });
+
+        renderThread.setName("renderLoop");
+        renderThread.start();
+    }
+
+    private void renderLoop() {
+        //RenderThread안에서는 Atomic변수들만 참조하도록 권장.
+        if (bufferStrategy == null) return;
+
+        int currentWidth = getWidth();
+        int currentHeight = getHeight();
+
+        if (currentWidth <= 0 || currentHeight <= 0) return;
+
+        if (vramBuffer == null ||
+                vramBuffer.getWidth() != currentWidth ||
+                vramBuffer.getHeight() != currentHeight ||
+                vramBuffer.validate(getGraphicsConfiguration()) == VolatileImage.IMAGE_INCOMPATIBLE) {
+
+            vramBuffer = getGraphicsConfiguration().createCompatibleVolatileImage(currentWidth, currentHeight);
+        }
+
+        do {
+            if (vramBuffer.validate(getGraphicsConfiguration()) == VolatileImage.IMAGE_RESTORED) {
+                // VRAM 복구 이벤트 발생 시 필요한 처리
+            }
+
+            Graphics2D d2 = vramBuffer.createGraphics();
+            try {
+                d2.setColor(Color.BLACK);
+                d2.fillRect(0, 0, currentWidth, currentHeight);
+
+                d2.translate(viewMetrics.getCurrentXOffset(), viewMetrics.getCurrentYOffset());
+                d2.scale(viewMetrics.getCurrentScale(), viewMetrics.getCurrentScale());
+
+                if (!io.load.isLoadEnd()) {
+                    renderLoadingScreen(d2);
+                } else {
+                    render(d2);
+                }
+
+                if (Fw.Debugger.showHitbox) {
+                    Fw.Debugger.Internal.renderHitbox(d2);
+                }
+
+            } finally {
+                d2.dispose();
+            }
+
+            Graphics hwGraphics = bufferStrategy.getDrawGraphics();
+            try {
+                hwGraphics.drawImage(vramBuffer, 0, 0, null);
+            } finally {
+                hwGraphics.dispose();
+            }
+
+            bufferStrategy.show();
+
+        } while (vramBuffer.contentsLost());
     }
 
     public abstract void init(Io io, OperatorManager operators);
@@ -139,30 +267,24 @@ public abstract class Base extends JPanel implements IFrameSize {
     @Override public int getComponentWidth() { return this.getWidth(); }
     @Override public int getComponentHeight() { return this.getHeight(); }
 
-    public int getMouseX() {return viewMetrics.getVirtualMouseX();}
-    public int getMouseY() {return viewMetrics.getVirtualMouseY();}
+    public int getMouseX() { return viewMetrics.getVirtualMouseX(); }
+    public int getMouseY() { return viewMetrics.getVirtualMouseY(); }
 
     public void save() {
         io.save.save();
     }
 
     public void exit() {
-        //System.out.println("exit now..");
-
         save();
         operatorManager.exitOperatorPack.launch();
 
-        if (executor != null && !executor.isShutdown()) {
-            executor.shutdown();
+        running = false;
+        if (logicThread != null) {
             try {
-                if (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
-                    executor.shutdownNow();
-                }
+                logicThread.join(1000);
             } catch (InterruptedException e) {
-                executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
-            //System.out.println("exit.");
         }
 
         if (frame != null) {
@@ -176,23 +298,5 @@ public abstract class Base extends JPanel implements IFrameSize {
             loadingComponent.render(g);
         }
     }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        Graphics2D d2 = (Graphics2D) g;
-
-        d2.translate(viewMetrics.getCurrentXOffset(), viewMetrics.getCurrentYOffset());
-        d2.scale(viewMetrics.getCurrentScale(), viewMetrics.getCurrentScale());
-
-        if (!io.load.isLoadEnd()) {
-            renderLoadingScreen(g);
-        } else {
-            render(g);
-        }
-
-        if (Fw.Debugger.showHitbox) {
-            Fw.Debugger.Internal.renderHitbox(g);
-        }
-    }
 }
+//-Dsun.java2d.opengl=true

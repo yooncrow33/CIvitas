@@ -19,19 +19,15 @@ public class Test extends Base {
     static {
         Core.setConfig(new Config(new
                 Config.Builder("fwTest").
-                setWindowWidth(640).
-                setWindowHeight(340)
+                setWindowWidth(1280).
+                setWindowHeight(3720)
         ));
-    }
-
-    {
-        this.enableInputMethods(true);
     }
 
     public Test() {
         super(new Builder().setIntegerKey(1).setStringKey("1"));
 
-        new TestBinding(this);
+        //new TestBinding(this);
 
         this.enableInputMethods(true);
         this.requestFocusInWindow();
@@ -63,16 +59,17 @@ public class Test extends Base {
 
                     // 조합 중인 한글 처리
                     StringBuilder composing = new StringBuilder();
-                    while (c != AttributedCharacterIterator.DONE) {
+                    for(composing = new StringBuilder(); c != '\uffff'; c = text.next()) {
                         composing.append(c);
-                        c = text.next();
                     }
                     koComponent.setComposingText(composing.toString());
                 } else {
                     koComponent.setComposingText("");
                 }
-                repaint();
                 event.consume();
+
+                System.out.println("Committed 카운트: " + event.getCommittedCharacterCount());
+                System.out.println("텍스트 전체: " + event.getText());
             }
 
             @Override
@@ -124,9 +121,18 @@ public class Test extends Base {
                         // OS 및 IME 상태에 따라 영문이 중복 입력되는 것을 방지하기 위해
                         // 현재 입력된 문자가 직전 InputMethodListener에 의해 이미 들어가지 않았는지 검증할 수 있습니다.
                         koComponent.getTextBuffer().append(c);
-                        repaint();
                     }
                 }
+            }
+        });
+
+        // 생성자 맨 아래에 추가
+        this.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                Test.this.setFocusable(true);
+                Test.this.requestFocusInWindow();
+                System.out.println("현재 컴포넌트가 포커스를 가졌나요?: " + Test.this.isFocusOwner());
             }
         });
     }
@@ -150,21 +156,6 @@ public class Test extends Base {
     public void update(double dt) {}
 
     @Override
-    public java.awt.im.InputMethodRequests getInputMethodRequests() {
-        return new java.awt.im.InputMethodRequests() {
-            @Override public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
-            @Override public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {
-                return new java.awt.Rectangle(50, 130, 0, 0);
-            }
-            @Override public java.text.AttributedCharacterIterator getSelectedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-            @Override public java.text.AttributedCharacterIterator getCommittedText(int beginIndex, int endIndex, java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-            @Override public int getCommittedTextLength() { return 0; }
-            @Override public int getInsertPositionOffset() { return 0; }
-            @Override public java.text.AttributedCharacterIterator cancelLatestCommittedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-        };
-    }
-
-    @Override
     public void render(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
@@ -176,6 +167,25 @@ public class Test extends Base {
         // Ko 객체로부터 텍스트를 받아와서 렌더링
         g.setColor(koComponent.isFocused() ? Color.CYAN : Color.GRAY);
         g.drawString(koComponent.getInputText() + "_", 50, 130);
+    }
+
+    @Override
+    public java.awt.im.InputMethodRequests getInputMethodRequests() {
+        return new java.awt.im.InputMethodRequests() {
+            @Override public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
+            @Override public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {
+                return new java.awt.Rectangle(50, 130, 0, 0);
+            }
+            @Override public java.text.AttributedCharacterIterator getSelectedText(
+                    java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
+            @Override public java.text.AttributedCharacterIterator
+            getCommittedText(int beginIndex, int endIndex, java.text.AttributedCharacterIterator.Attribute[] attributes)
+            { return null; }
+            @Override public int getCommittedTextLength() { return 0; }
+            @Override public int getInsertPositionOffset() { return 0; }
+            @Override public java.text.AttributedCharacterIterator
+            cancelLatestCommittedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
+        };
     }
 
     public static void main(String[] args) {

@@ -23,7 +23,8 @@ public final class Load {
 
     public void addLoadObject(IoObject ioObject) {
         if (loadEnd) {
-            System.err.println(InternalUtils.Time.getTimeFormate() + " / add loadObject to loadObject Array in after load!");
+            System.err.println(InternalUtils.Time.getTimeFormate() + " / add loadObject to loadObject Array in after" +
+                    " load!");
             return;
         }
         io.ioObjects.add(ioObject);
