@@ -126,15 +126,14 @@ public class Test extends Base {
             }
         });
 
-        // 생성자 맨 아래에 추가
-        this.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mousePressed(java.awt.event.MouseEvent e) {
-                Test.this.setFocusable(true);
-                Test.this.requestFocusInWindow();
-                System.out.println("현재 컴포넌트가 포커스를 가졌나요?: " + Test.this.isFocusOwner());
-            }
-        });
+        // 생성자 하단이나 초기화 메서드에 추가
+        java.awt.im.InputContext ic = this.getInputContext();
+        if (ic != null) {
+            // 1. 현재 컴포넌트를 IME에 강제 매핑
+            ic.dispatchEvent(new java.awt.event.FocusEvent(this, java.awt.event.FocusEvent.FOCUS_GAINED));
+            // 2. IME 엔진에게 한글(혹은 현재 로케일) 입력기 강제 선택 유도
+            ic.selectInputMethod(java.util.Locale.getDefault());
+        }
     }
 
     private void onEnterPressed(String fullText) {
