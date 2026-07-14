@@ -17,11 +17,11 @@ public class Test extends Base {
     private final Ko koComponent = new Ko();
 
     static {
-        Core.setConfig(new Config(new
+        Core.setConfig(new
                 Config.Builder("fwTest").
                 setWindowWidth(1280).
-                setWindowHeight(3720)
-        ));
+                setWindowHeight(3720).build()
+        );
     }
 
     public Test() {
@@ -166,25 +166,6 @@ public class Test extends Base {
         // Ko 객체로부터 텍스트를 받아와서 렌더링
         g.setColor(koComponent.isFocused() ? Color.CYAN : Color.GRAY);
         g.drawString(koComponent.getInputText() + "_", 50, 130);
-    }
-
-    @Override
-    public java.awt.im.InputMethodRequests getInputMethodRequests() {
-        return new java.awt.im.InputMethodRequests() {
-            @Override public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
-            @Override public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {
-                return new java.awt.Rectangle(50, 130, 0, 0);
-            }
-            @Override public java.text.AttributedCharacterIterator getSelectedText(
-                    java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-            @Override public java.text.AttributedCharacterIterator
-            getCommittedText(int beginIndex, int endIndex, java.text.AttributedCharacterIterator.Attribute[] attributes)
-            { return null; }
-            @Override public int getCommittedTextLength() { return 0; }
-            @Override public int getInsertPositionOffset() { return 0; }
-            @Override public java.text.AttributedCharacterIterator
-            cancelLatestCommittedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-        };
     }
 
     public static void main(String[] args) {

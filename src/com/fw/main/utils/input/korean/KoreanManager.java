@@ -12,5 +12,5 @@ class KoreanManager {
     public static void koreanObjectRemove(KoreanObject o) {koreanObjectMap.remove(o.id);}
     public static void activeObjectRemove(KoreanObject o) {activeObjectsMap.remove(o.id);}
 
-
+    public static boolean isActiveKoreanObjectIsEmpty() { return activeObjectsMap.isEmpty(); }
 }

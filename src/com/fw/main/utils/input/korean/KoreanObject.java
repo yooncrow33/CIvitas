@@ -4,10 +4,32 @@ import java.util.UUID;
 
 public class KoreanObject {
     final UUID id = UUID.randomUUID();
+    KoreanObjectEventListener listener;
+
+    private final StringBuilder textBuffer = new StringBuilder();
     private String composingText = "";
     private boolean focused = false;
-    private final StringBuilder textBuffer = new StringBuilder(); // 완성된 글자들
-    KoreanObjectEventListener listener;
+    public void setFocused(boolean focused) {
+        this.focused = focused;
+        if (focused) {
+            KoreanManager.activeObjectPut(this);
+        } else {
+            KoreanManager.activeObjectRemove(this);
+        }
+    }
+    public boolean isFocused() { return this.focused; }
+    public StringBuilder getTextBuffer() { return textBuffer; }
+    public String getComposingText() { return composingText; }
+    public void setComposingText(String composingText) { this.composingText = composingText; }
+
+    public void clear() {
+        textBuffer.setLength(0);
+        composingText = "";
+    }
+
+    public String getInputText() {
+        return textBuffer.toString() + composingText;
+    }
 
     public KoreanObject() {
         KoreanManager.koreanObjectPut(this);
@@ -19,28 +41,4 @@ public class KoreanObject {
         KoreanManager.koreanObjectRemove(this);
     }
 
-
-    public void setFocused(boolean focused) {
-        this.focused = focused;
-        if (focused) {
-            KoreanManager.activeObjectPut(this);
-        } else {
-            KoreanManager.activeObjectRemove(this);
-        }
-    }
-
-    public boolean isFocused() {
-        return this.focused;
-    }
-
-    public String getComposingText() {
-        return composingText;
-    }
-
-    public StringBuilder getStringBuilder() {return textBuffer;}
-
-    public void clear() {
-        textBuffer.setLength(0);
-        composingText = "";
-    }
 }

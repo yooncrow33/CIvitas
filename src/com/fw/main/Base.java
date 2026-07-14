@@ -6,6 +6,8 @@ import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.internal.sys.view.IFrameSize;
 import com.fw.internal.sys.view.ViewMetrics;
 import com.fw.internal.utils.InternalUtils;
+import com.fw.main.utils.input.korean.KoreanModule;
+import com.test.Ko;
 
 import javax.swing.*;
 import java.awt.*;
@@ -34,6 +36,7 @@ public abstract class Base extends Canvas implements IFrameSize {
     private VolatileImage vramBuffer;
 
     public GraphicsComponent loadingComponent = null;
+    private KoreanModule koreanModule;
 
     public Base(Builder builder) {
         if (!Core.isIsSetConfig()) {
@@ -80,6 +83,10 @@ public abstract class Base extends Canvas implements IFrameSize {
                 exit();
             }
         });
+
+        if (Core.get().isUseKoreanModule()) {
+            koreanModule = new KoreanModule(this);
+        }
 
         Fw.add(builder.integerKey, this);
         Fw.add(builder.stringKey, this);
@@ -173,7 +180,6 @@ public abstract class Base extends Canvas implements IFrameSize {
 
             while (running) {
                 long now = System.nanoTime();
-                double deltaTime = (now - lastTime) / 1_000_000_000.0;
                 lastTime = now;
 
                 try {
@@ -297,6 +303,25 @@ public abstract class Base extends Canvas implements IFrameSize {
         if (loadingComponent != null) {
             loadingComponent.render(g);
         }
+    }
+
+    @Override
+    public java.awt.im.InputMethodRequests getInputMethodRequests() {
+        return new java.awt.im.InputMethodRequests() {
+            @Override public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
+            @Override public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {
+                return new java.awt.Rectangle(50, 130, 0, 0);
+            }
+            @Override public java.text.AttributedCharacterIterator getSelectedText(
+                    java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
+            @Override public java.text.AttributedCharacterIterator
+            getCommittedText(int beginIndex, int endIndex, java.text.AttributedCharacterIterator.Attribute[] attributes)
+            { return null; }
+            @Override public int getCommittedTextLength() { return 0; }
+            @Override public int getInsertPositionOffset() { return 0; }
+            @Override public java.text.AttributedCharacterIterator
+            cancelLatestCommittedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
+        };
     }
 }
 //-Dsun.java2d.opengl=true
