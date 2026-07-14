@@ -21,7 +21,6 @@ public abstract class IoObject {
         if (!file.exists()) {
             initLoad(p);
         }
-        load(p);
         try (FileInputStream in = new FileInputStream(fullPath)) {
             p.load(in);
             load(p);
