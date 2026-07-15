@@ -1,4 +1,4 @@
-package com.fw.main.utils;
+package com.fw.main.utils.collision;
 
 import com.fw.internal.utils.InternalUtils;
 import com.fw.main.Fw;

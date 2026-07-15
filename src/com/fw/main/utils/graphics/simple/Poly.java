@@ -1,4 +1,4 @@
-package com.fw.main.utils.graphics;
+package com.fw.main.utils.graphics.simple;
 
 import java.awt.*;
 

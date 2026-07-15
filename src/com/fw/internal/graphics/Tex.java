@@ -1,6 +1,6 @@
 package com.fw.internal.graphics;
 
-import com.fw.main.utils.RU;
+import com.fw.main.utils.graphics.RU;
 
 import java.awt.*;
 

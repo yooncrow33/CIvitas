@@ -1,6 +1,6 @@
-package com.fw.main.utils.graphics;
+package com.fw.main.utils.graphics.simple;
 
-import com.fw.main.utils.RU;
+import com.fw.main.utils.graphics.RU;
 
 import java.awt.*;
 

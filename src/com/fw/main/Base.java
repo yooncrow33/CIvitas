@@ -32,7 +32,6 @@ public abstract class Base extends Canvas implements IFrameSize {
     private final OperatorManager operatorManager = new OperatorManager();
 
     private BufferStrategy bufferStrategy;
-
     private VolatileImage vramBuffer;
 
     public GraphicsComponent loadingComponent = null;

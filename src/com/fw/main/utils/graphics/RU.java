@@ -1,7 +1,8 @@
-package com.fw.main.utils;
+package com.fw.main.utils.graphics;
 
 import java.awt.*;
 
+//render utils.
 public class RU {
     public static void drawStringCenter(Graphics g, String text, int x, int y) {
         FontMetrics metrics = g.getFontMetrics();

@@ -1,9 +1,8 @@
 package com.fw.main;
 
-import com.fw.main.utils.Hitbox;
+import com.fw.main.utils.collision.Hitbox;
 
 import java.awt.*;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
