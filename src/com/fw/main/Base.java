@@ -7,7 +7,6 @@ import com.fw.internal.sys.view.IFrameSize;
 import com.fw.internal.sys.view.ViewMetrics;
 import com.fw.internal.utils.InternalUtils;
 import com.fw.main.utils.input.korean.KoreanModule;
-import com.test.Ko;
 
 import javax.swing.*;
 import java.awt.*;

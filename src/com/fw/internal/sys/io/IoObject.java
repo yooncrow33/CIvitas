@@ -1,17 +1,20 @@
-package com.fw.main.api.io;
+package com.fw.internal.sys.io;
 
 import com.fw.internal.utils.InternalUtils;
+import com.fw.main.api.io.IoInterface;
 
 import javax.swing.*;
 import java.io.*;
 import java.util.Properties;
 
-public abstract class IoObject {
+public class IoObject {
     public final String fileName;
     public final String fullPath;
+    private final IoInterface ioInterface;
 
-    public IoObject(String fileName) {
+    public IoObject(String fileName, IoInterface ioInterface) {
         this.fileName = fileName;
+        this.ioInterface = ioInterface;
         fullPath = InternalUtils.getProjectFolder() + File.separator + fileName + ".fw";
     }
 
@@ -19,11 +22,11 @@ public abstract class IoObject {
         Properties p = new Properties();
         File file = new File(fullPath);
         if (!file.exists()) {
-            initLoad(p);
+            ioInterface.initLoad(p);
         }
         try (FileInputStream in = new FileInputStream(fullPath)) {
             p.load(in);
-            load(p);
+            ioInterface.load(p);
         } catch (IOException | NumberFormatException e) {
             JOptionPane.showMessageDialog(null, "load fail: " + e.getMessage());
         }
@@ -32,9 +35,8 @@ public abstract class IoObject {
     public void internalSave() {
         Properties props = new Properties();
 
-        save(props);
+        ioInterface.save(props);
 
-        // 폴더 생성 확인
         File file = new File(fullPath);
         file.getParentFile().mkdirs();
 
@@ -44,8 +46,4 @@ public abstract class IoObject {
             JOptionPane.showMessageDialog(null, "save fail: " + e.getMessage());
         }
     }
-
-    public abstract void save(Properties p);
-    public abstract void load(Properties p);
-    public abstract void initLoad(Properties p);
 }

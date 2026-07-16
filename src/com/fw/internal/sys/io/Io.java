@@ -1,7 +1,5 @@
 package com.fw.internal.sys.io;
 
-import com.fw.main.api.io.IoObject;
-
 import java.util.ArrayList;
 
 public class Io {

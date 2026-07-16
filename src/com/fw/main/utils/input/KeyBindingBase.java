@@ -1,5 +1,8 @@
 package com.fw.main.utils.input;
 
+import com.fw.internal.utils.Internal;
+import com.fw.main.utils.input.korean.KoreanManager;
+
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
@@ -91,6 +94,9 @@ public abstract class KeyBindingBase {
         if (keyBindingBaseOption!=null) {
             if (!keyBindingBaseOption.isOn()) {return;}
         }
+        if(KoreanManager.isActiveKoreanObjectIsEmpty()) {
+            return;
+        }
         switch (k) {
             case A -> onKeyAPress();
             case B -> onKeyBPress();
@@ -162,6 +168,9 @@ public abstract class KeyBindingBase {
     private void dispatchRelease(KBKey k) {
         if (keyBindingBaseOption!=null) {
             if (!keyBindingBaseOption.isOn()) {return;}
+        }
+        if(KoreanManager.isActiveKoreanObjectIsEmpty()) {
+            return;
         }
         switch (k) {
             case A -> onKeyARelease();

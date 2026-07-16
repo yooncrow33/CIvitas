@@ -1,14 +1,12 @@
 package com.fw.main.utils.input.korean;
 
 import com.fw.main.Base;
-import com.test.Ko;
 
 import java.awt.event.InputMethodEvent;
 import java.awt.event.InputMethodListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.text.AttributedCharacterIterator;
-import java.util.ArrayList;
 
 public class KoreanModule {
 

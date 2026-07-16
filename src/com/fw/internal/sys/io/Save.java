@@ -1,9 +1,7 @@
 package com.fw.internal.sys.io;
 
-import com.fw.main.api.io.IoObject;
 import com.fw.internal.utils.InternalUtils;
-
-import java.util.ArrayList;
+import com.fw.main.api.io.IoInterface;
 
 public final class Save {
     private int progress = 0;
@@ -12,8 +10,8 @@ public final class Save {
     public Save(Io io) {this.io = io;}
 
 
-    public void addSaveObject(IoObject ioObject) {
-        io.ioObjects.add(ioObject);
+    public void addSaveObject(String fileName,IoInterface ioInterface) {
+        io.ioObjects.add(new IoObject(fileName, ioInterface));
     }
 
     public float getProgress() {
