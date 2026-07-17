@@ -9,11 +9,6 @@ public final class Save {
     final Io io;
     public Save(Io io) {this.io = io;}
 
-
-    public void addSaveObject(String fileName,IoInterface ioInterface) {
-        io.ioObjects.add(new IoObject(fileName, ioInterface));
-    }
-
     public float getProgress() {
         return (float) progress / maxProgress * 100;
     }

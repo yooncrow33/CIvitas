@@ -3,13 +3,16 @@ package com.test;
 import com.fw.internal.sys.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.main.*;
+import com.fw.main.api.io.IoInterface;
 import com.fw.main.utils.input.korean.KoreanObject;
 import com.fw.main.utils.input.korean.KoreanObjectEventListener;
 
 import java.awt.*;
-public class Test extends Base {
+import java.util.Properties;
 
+public class Test extends Base {
     KoreanObject ko = new KoreanObject();
+    float aFloat;
 
     static {
         Core.setConfig(new
@@ -40,10 +43,29 @@ public class Test extends Base {
                 System.out.println("exit");
             }
         });
+
+        io.addIoObject("default", new IoInterface() {
+            @Override
+            public void save(Properties p) {
+                p.setProperty("float", Float.toString(aFloat));
+            }
+
+            @Override
+            public void load(Properties p) {
+                aFloat = Float.parseFloat((String) p.get("float"));
+            }
+
+            @Override
+            public void initLoad(Properties p) {
+                aFloat = (float) Math.random();
+            }
+        }) ;
     }
 
     @Override
-    public void update(double dt) {}
+    public void update(double dt) {
+        aFloat = (float) Math.random();
+    }
 
     @Override
     public void render(Graphics g) {

@@ -289,6 +289,13 @@ public abstract class Base extends Canvas implements IFrameSize {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
+            if (renderThread != null) {
+                try {
+                    (renderThread).join(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
         }
 
         if (frame != null) {

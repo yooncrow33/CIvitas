@@ -1,5 +1,6 @@
 package com.fw.main;
 
+import com.fw.internal.utils.Internal;
 import com.fw.main.utils.collision.Hitbox;
 
 import java.awt.*;
@@ -20,18 +21,25 @@ public class Fw {
     public static class Debugger {
         public static boolean showHitbox;
         private static Map<UUID, Hitbox> hitboxMap = new ConcurrentHashMap<>();
+        private static Map<UUID, Hitbox> activeHitboxMap = new ConcurrentHashMap<>();
         static void renderHitbox(Graphics g) {
-            for (Hitbox h : hitboxMap.values()) {
+            for (Hitbox h : activeHitboxMap.values()) {
                 h.renderHitbox(g);
             }
         }
         static void addObject(Hitbox hitbox) {
             hitboxMap.put(hitbox.id,hitbox);
         }
+        static void enableObject(Hitbox hitbox) {
+            activeHitboxMap.put(hitbox.id,hitbox);
+        }
         static void freeObject(Hitbox hitbox) {
             hitboxMap.remove(hitbox.id);
         }
-        @Deprecated
+        static void disableObject(Hitbox hitbox) {
+            activeHitboxMap.remove(hitbox.id);
+        }
+        @com.fw.internal.utils.Internal
         public static class Internal {
             public static void addObject(Hitbox hitbox) {
                 Debugger.addObject(hitbox);
@@ -39,6 +47,8 @@ public class Fw {
             public static void freeObject(Hitbox hitbox) {
                 Debugger.freeObject(hitbox);
             }
+            public static void enableObject(Hitbox hitbox) { Debugger.enableObject(hitbox); }
+            public static void disableObject(Hitbox hitbox) { Debugger.disableObject(hitbox); }
             public static void renderHitbox(Graphics g) {
                 Debugger.renderHitbox(g);
             }

@@ -19,15 +19,6 @@ public final class Load {
         return loadStart;
     }
 
-    public void addLoadObject(String fileName, IoInterface ioInterface) {
-        if (loadEnd) {
-            System.err.println(InternalUtils.Time.getTimeFormate() + " / add loadObject to loadObject Array in after" +
-                    " load!");
-            return;
-        }
-        io.ioObjects.add(new IoObject(fileName, ioInterface));
-    }
-
     public float getProgress() {
         return (float) progress / maxProgress * 100;
     }
