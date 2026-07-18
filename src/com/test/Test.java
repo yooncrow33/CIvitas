@@ -1,11 +1,13 @@
 package com.test;
 
-import com.fw.internal.sys.io.Io;
+import com.fw.main.api.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.main.*;
 import com.fw.main.api.io.IoInterface;
 import com.fw.main.utils.input.korean.KoreanObject;
 import com.fw.main.utils.input.korean.KoreanObjectEventListener;
+import com.fw.main.utils.input.mouse.FwMouseAPI;
+import com.fw.main.utils.input.mouse.MouseInterface;
 
 import java.awt.*;
 import java.util.Properties;
@@ -16,7 +18,7 @@ public class Test extends Base {
 
     static {
         Core.setConfig(new
-                Config.Builder("fwTest").
+                Config.Builder("projectName"). // = folder name.
                 setWindowWidth(1280).
                 setWindowHeight(720).
                 setUseKoreanModule(true).build()
@@ -59,7 +61,42 @@ public class Test extends Base {
             public void initLoad(Properties p) {
                 aFloat = (float) Math.random();
             }
-        }) ;
+        });
+
+        registerMouseInterface(new MouseInterface() {
+            @Override
+            public void mouseClicked(FwMouseAPI e) {
+                System.out.println("Click!");
+                System.out.println("from :" + e.getButton());
+            }
+
+            @Override
+            public void mousePressed(FwMouseAPI e) {
+                if(e.isDoubleClick()) {
+                    System.out.println("Double CLick!");
+                }
+            }
+
+            @Override
+            public void mouseReleased(FwMouseAPI e) {
+                //other implements.....
+            }
+
+            @Override
+            public void mouseEntered(FwMouseAPI e) {
+
+            }
+
+            @Override
+            public void mouseExited(FwMouseAPI e) {
+
+            }
+
+            @Override
+            public void mouseWheelMoved(FwMouseAPI e) {
+
+            }
+        });
     }
 
     @Override

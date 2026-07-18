@@ -1,7 +1,7 @@
 package com.fw.internal.sys.io;
 
 import com.fw.internal.utils.InternalUtils;
-import com.fw.main.api.io.IoInterface;
+import com.fw.main.api.io.Io;
 
 public final class Load {
     private boolean loadStart = false;

@@ -1,12 +1,14 @@
 package com.fw.main;
 
 import com.fw.internal.graphics.object.GraphicsComponent;
-import com.fw.internal.sys.io.Io;
+import com.fw.internal.sys.input.MouseAtBase;
+import com.fw.main.api.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.internal.sys.view.IFrameSize;
 import com.fw.internal.sys.view.ViewMetrics;
 import com.fw.internal.utils.InternalUtils;
 import com.fw.main.utils.input.korean.KoreanModule;
+import com.fw.main.utils.input.mouse.MouseInterface;
 
 import javax.swing.*;
 import java.awt.*;
@@ -35,6 +37,7 @@ public abstract class Base extends Canvas implements IFrameSize {
 
     public GraphicsComponent loadingComponent = null;
     private KoreanModule koreanModule;
+    private MouseAtBase mouseAtBase;
 
     public Base(Builder builder) {
         if (!Core.isIsSetConfig()) {
@@ -89,6 +92,7 @@ public abstract class Base extends Canvas implements IFrameSize {
         Fw.add(builder.integerKey, this);
         Fw.add(builder.stringKey, this);
 
+        mouseAtBase = new MouseAtBase(this);
         init(io, operatorManager);
 
         launch();
@@ -268,11 +272,13 @@ public abstract class Base extends Canvas implements IFrameSize {
     public abstract void update(double dt);
     public abstract void render(Graphics g);
 
+
     @Override public int getComponentWidth() { return this.getWidth(); }
     @Override public int getComponentHeight() { return this.getHeight(); }
 
     public int getMouseX() { return viewMetrics.getVirtualMouseX(); }
     public int getMouseY() { return viewMetrics.getVirtualMouseY(); }
+    public void registerMouseInterface(MouseInterface mouseInterface) { mouseAtBase.registerInterface(mouseInterface); }
 
     public void save() {
         io.save.save();
