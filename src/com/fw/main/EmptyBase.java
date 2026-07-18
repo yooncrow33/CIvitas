@@ -1,14 +1,9 @@
 package com.fw.main;
 
-import com.fw.internal.graphics.object.GraphicsComponent;
-import com.fw.internal.sys.input.MouseAtBase;
-import com.fw.main.api.io.Io;
-import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.internal.sys.view.IFrameSize;
 import com.fw.internal.sys.view.ViewMetrics;
 import com.fw.internal.utils.InternalUtils;
 import com.fw.main.utils.input.korean.KoreanModule;
-import com.fw.main.utils.input.mouse.MouseInterface;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,7 +14,7 @@ import java.awt.event.MouseMotionAdapter;
 import java.awt.image.BufferStrategy;
 import java.awt.image.VolatileImage;
 
-public abstract class Base extends Canvas implements IFrameSize {
+public abstract class EmptyBase extends Canvas implements IFrameSize {
     public JFrame frame = new JFrame("Civitas Engine");
 
     private Thread logicThread;
@@ -29,17 +24,11 @@ public abstract class Base extends Canvas implements IFrameSize {
     private final Mouse mouse = new Mouse(this);
     public Mouse getMouse() { return mouse; }
     private final ViewMetrics viewMetrics;
-    protected final Io io = new Io();
-    private final OperatorManager operatorManager = new OperatorManager();
 
     private BufferStrategy bufferStrategy;
     private VolatileImage vramBuffer;
 
-    public GraphicsComponent loadingComponent = null;
-    private KoreanModule koreanModule;
-    private MouseAtBase mouseAtBase;
-
-    public Base(Builder builder) {
+    public EmptyBase() {
         if (!Core.isIsSetConfig()) {
             System.err.println("config is null! you should init config to Core.java in the static block!");
             System.exit(0);
@@ -85,21 +74,9 @@ public abstract class Base extends Canvas implements IFrameSize {
             }
         });
 
-        if (Core.get().isUseKoreanModule()) {
-            koreanModule = new KoreanModule(this);
-        }
-
-        if (builder.integerKey!=null) { Fw.add(builder.integerKey, this); }
-        if (builder.stringKey!=null) { Fw.add(builder.stringKey, this); }
-
-        mouseAtBase = new MouseAtBase(this);
-        init(io, operatorManager);
+        init();
 
         launch();
-
-        new Thread(() -> {
-            io.load.load();
-        }).start();
     }
 
     public static class Builder {
@@ -118,9 +95,9 @@ public abstract class Base extends Canvas implements IFrameSize {
     }
 
     public class Mouse {
-        final Base base;
+        final EmptyBase base;
 
-        public Mouse(Base base) {
+        public Mouse(EmptyBase base) {
             this.base = base;
         }
 
@@ -143,9 +120,7 @@ public abstract class Base extends Canvas implements IFrameSize {
                 lastTime = now;
 
                 try {
-                    if (io.load.isLoadEnd()) {
-                        update(deltaTime);
-                    }
+                    update(deltaTime);
 
                 } catch (Throwable t) {
                     t.printStackTrace();
@@ -242,11 +217,7 @@ public abstract class Base extends Canvas implements IFrameSize {
                 d2.translate(viewMetrics.getCurrentXOffset(), viewMetrics.getCurrentYOffset());
                 d2.scale(viewMetrics.getCurrentScale(), viewMetrics.getCurrentScale());
 
-                if (!io.load.isLoadEnd()) {
-                    renderLoadingScreen(d2);
-                } else {
-                    render(d2);
-                }
+                render(d2);
 
                 if (Fw.Debugger.showHitbox) {
                     Fw.Debugger.Internal.renderHitbox(d2);
@@ -268,7 +239,7 @@ public abstract class Base extends Canvas implements IFrameSize {
         } while (vramBuffer.contentsLost());
     }
 
-    public abstract void init(Io io, OperatorManager operators);
+    public abstract void init();
     public abstract void update(double dt);
     public abstract void render(Graphics g);
 
@@ -278,15 +249,9 @@ public abstract class Base extends Canvas implements IFrameSize {
 
     public int getMouseX() { return viewMetrics.getVirtualMouseX(); }
     public int getMouseY() { return viewMetrics.getVirtualMouseY(); }
-    public void registerMouseInterface(MouseInterface mouseInterface) { mouseAtBase.registerInterface(mouseInterface); }
-
-    public void save() {
-        io.save.save();
-    }
 
     public void exit() {
-        save();
-        operatorManager.exitOperatorPack.launch();
+
 
         running = false;
         if (logicThread != null) {
@@ -308,31 +273,6 @@ public abstract class Base extends Canvas implements IFrameSize {
             frame.setVisible(false);
             frame.dispose();
         }
-    }
-
-    private void renderLoadingScreen(Graphics g) {
-        if (loadingComponent != null) {
-            loadingComponent.render(g);
-        }
-    }
-
-    @Override
-    public java.awt.im.InputMethodRequests getInputMethodRequests() {
-        return new java.awt.im.InputMethodRequests() {
-            @Override public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
-            @Override public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {
-                return new java.awt.Rectangle(50, 130, 0, 0);
-            }
-            @Override public java.text.AttributedCharacterIterator getSelectedText(
-                    java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-            @Override public java.text.AttributedCharacterIterator
-            getCommittedText(int beginIndex, int endIndex, java.text.AttributedCharacterIterator.Attribute[] attributes)
-            { return null; }
-            @Override public int getCommittedTextLength() { return 0; }
-            @Override public int getInsertPositionOffset() { return 0; }
-            @Override public java.text.AttributedCharacterIterator
-            cancelLatestCommittedText(java.text.AttributedCharacterIterator.Attribute[] attributes) { return null; }
-        };
     }
 }
 //-Dsun.java2d.opengl=true

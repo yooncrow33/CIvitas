@@ -21,7 +21,9 @@ public class Test extends Base {
                 Config.Builder("projectName"). // = folder name.
                 setWindowWidth(1280).
                 setWindowHeight(720).
-                setUseKoreanModule(true).build()
+                setUseKoreanModule(true).
+                setEncryptionKey("keyforencryption").
+                setUseEncryption(true).build()
         );
     }
 
