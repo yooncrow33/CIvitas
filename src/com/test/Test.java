@@ -1,9 +1,11 @@
 package com.test;
 
+import com.fw.internal.sys.Console;
 import com.fw.main.api.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.main.*;
 import com.fw.main.api.io.IoInterface;
+import com.fw.main.api.sys.ConsoleCMD;
 import com.fw.main.utils.input.korean.KoreanObject;
 import com.fw.main.utils.input.korean.KoreanObjectEventListener;
 import com.fw.main.utils.input.mouse.FwMouseAPI;
@@ -28,7 +30,11 @@ public class Test extends Base {
     }
 
     public Test() {
-        super(new Builder().setIntegerKey(1).setStringKey("1"));
+        super(new Builder().
+                setIntegerKey(1).
+                setStringKey("1").
+                setUseConsole(true)
+        );
         ko.setFocused(true);
         ko.registerKoreanObjectEventListener(new KoreanObjectEventListener() {
             @Override
@@ -41,6 +47,15 @@ public class Test extends Base {
 
     @Override
     public void init(Io io, OperatorManager operatorManager) {
+        new TestBindingLegacy(this);
+
+        registerConsoleCMD(new ConsoleCMD() {
+            @Override
+            public void CMD(String rawInput) {
+                //CMD.......
+            }
+        });
+
         operatorManager.exitOperatorPack.addOperator(new Operator() {
             @Override
             public void exe() {

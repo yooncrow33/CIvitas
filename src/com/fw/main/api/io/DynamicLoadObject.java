@@ -9,15 +9,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public abstract class DynamicLoadObject {
+public class DynamicLoadObject {
     private static final ExecutorService loadExecutor = Executors.newSingleThreadExecutor();
 
     private final AtomicBoolean loadStart = new AtomicBoolean(false);
     private final AtomicBoolean loadEnd = new AtomicBoolean(false);
     private final String fullPath;
+    private final Dynamic interfaceObject;
 
-    public DynamicLoadObject(String fullPath) {
+    private DynamicLoadObject(String fullPath, Dynamic dynamic) {
         this.fullPath = fullPath;
+        interfaceObject = dynamic;
     }
 
     public void internalLoad() {
@@ -29,7 +31,7 @@ public abstract class DynamicLoadObject {
         }
         try (FileInputStream in = new FileInputStream(file)) {
             p.load(in);
-            load(p);
+            interfaceObject.load(p);
         } catch (IOException | NumberFormatException e) {
             SwingUtilities.invokeLater(() ->
                     JOptionPane.showMessageDialog(null, "Load fail: " + e.getMessage())
@@ -50,8 +52,6 @@ public abstract class DynamicLoadObject {
             }
         });
     }
-
-    public abstract void load(Properties p);
 
     public boolean isLoaded() {
         return loadEnd.get();

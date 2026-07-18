@@ -1,12 +1,14 @@
 package com.fw.main;
 
 import com.fw.internal.graphics.object.GraphicsComponent;
+import com.fw.internal.sys.Console;
 import com.fw.internal.sys.input.MouseAtBase;
 import com.fw.main.api.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.internal.sys.view.IFrameSize;
 import com.fw.internal.sys.view.ViewMetrics;
 import com.fw.internal.utils.InternalUtils;
+import com.fw.main.api.sys.ConsoleCMD;
 import com.fw.main.utils.input.korean.KoreanModule;
 import com.fw.main.utils.input.mouse.MouseInterface;
 
@@ -38,6 +40,10 @@ public abstract class Base extends Canvas implements IFrameSize {
     public GraphicsComponent loadingComponent = null;
     private KoreanModule koreanModule;
     private MouseAtBase mouseAtBase;
+
+    private ConsoleCMD consoleCMD = null;
+    public ConsoleCMD getConsoleCMD() {return consoleCMD;}
+    private Console console = null;
 
     public Base(Builder builder) {
         if (!Core.isIsSetConfig()) {
@@ -91,6 +97,9 @@ public abstract class Base extends Canvas implements IFrameSize {
 
         if (builder.integerKey!=null) { Fw.add(builder.integerKey, this); }
         if (builder.stringKey!=null) { Fw.add(builder.stringKey, this); }
+        if (builder.consoleUse) {
+            console = new Console(this);
+        }
 
         mouseAtBase = new MouseAtBase(this);
         init(io, operatorManager);
@@ -105,6 +114,7 @@ public abstract class Base extends Canvas implements IFrameSize {
     public static class Builder {
         String stringKey;
         Integer integerKey;
+        boolean consoleUse;
 
         public Builder setStringKey(String stringKey) {
             this.stringKey = stringKey;
@@ -113,6 +123,11 @@ public abstract class Base extends Canvas implements IFrameSize {
 
         public Builder setIntegerKey(Integer integerKey) {
             this.integerKey = integerKey;
+            return this;
+        }
+
+        public Builder setUseConsole(boolean b) {
+            this.consoleUse = b;
             return this;
         }
     }
@@ -252,6 +267,8 @@ public abstract class Base extends Canvas implements IFrameSize {
                     Fw.Debugger.Internal.renderHitbox(d2);
                 }
 
+                if (console!=null) { console.render(d2); }
+
             } finally {
                 d2.dispose();
             }
@@ -279,6 +296,8 @@ public abstract class Base extends Canvas implements IFrameSize {
     public int getMouseX() { return viewMetrics.getVirtualMouseX(); }
     public int getMouseY() { return viewMetrics.getVirtualMouseY(); }
     public void registerMouseInterface(MouseInterface mouseInterface) { mouseAtBase.registerInterface(mouseInterface); }
+    public void registerConsoleCMD(ConsoleCMD consoleCMD) { if(this.consoleCMD!=null) {
+        System.err.println("ConsoleCMD is already init!"); return;} this.consoleCMD = consoleCMD;}
 
     public void save() {
         io.save.save();
