@@ -9,6 +9,7 @@ import com.fw.internal.sys.view.IFrameSize;
 import com.fw.internal.sys.view.ViewMetrics;
 import com.fw.internal.utils.InternalUtils;
 import com.fw.main.api.sys.ConsoleCMD;
+import com.fw.main.api.sys.graphics.Call;
 import com.fw.main.utils.input.korean.KoreanModule;
 import com.fw.main.utils.input.mouse.MouseInterface;
 
@@ -20,6 +21,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.image.BufferStrategy;
 import java.awt.image.VolatileImage;
+import java.util.ArrayList;
 
 public abstract class Base extends Canvas implements IFrameSize {
     public JFrame frame = new JFrame("Civitas Engine");
@@ -27,6 +29,7 @@ public abstract class Base extends Canvas implements IFrameSize {
     private Thread logicThread;
     private Thread renderThread;
     private volatile boolean running = false;
+    private boolean useLegacyRendering;
 
     private final Mouse mouse = new Mouse(this);
     public Mouse getMouse() { return mouse; }
@@ -36,6 +39,14 @@ public abstract class Base extends Canvas implements IFrameSize {
 
     private BufferStrategy bufferStrategy;
     private VolatileImage vramBuffer;
+
+    private final ArrayList<Call> drawCalls = new ArrayList<>(1024);
+    private final ArrayList<Integer> drawCallXs = new ArrayList<>(1024);
+    private final ArrayList<Integer> drawCallYs = new ArrayList<>(1024);
+
+    private final ArrayList<Call> renderTargetCalls = new ArrayList<>(1024);
+    private final ArrayList<Integer> renderTargetXs = new ArrayList<>(1024);
+    private final ArrayList<Integer> renderTargetYs = new ArrayList<>(1024);
 
     public GraphicsComponent loadingComponent = null;
     private KoreanModule koreanModule;
@@ -100,6 +111,7 @@ public abstract class Base extends Canvas implements IFrameSize {
         if (builder.consoleUse) {
             console = new Console(this);
         }
+        this.useLegacyRendering = builder.useLegacyRendering;
 
         mouseAtBase = new MouseAtBase(this);
         init(io, operatorManager);
@@ -115,6 +127,7 @@ public abstract class Base extends Canvas implements IFrameSize {
         String stringKey;
         Integer integerKey;
         boolean consoleUse;
+        boolean useLegacyRendering;
 
         public Builder setStringKey(String stringKey) {
             this.stringKey = stringKey;
@@ -128,6 +141,11 @@ public abstract class Base extends Canvas implements IFrameSize {
 
         public Builder setUseConsole(boolean b) {
             this.consoleUse = b;
+            return this;
+        }
+
+        public Builder setUseLegacyRendering(boolean b) {
+            this.useLegacyRendering = b;
             return this;
         }
     }
@@ -228,25 +246,21 @@ public abstract class Base extends Canvas implements IFrameSize {
     }
 
     private void renderLoop() {
-        //RenderThread안에서는 Atomic변수들만 참조하도록 권장.
         if (bufferStrategy == null) return;
-
         int currentWidth = getWidth();
         int currentHeight = getHeight();
-
         if (currentWidth <= 0 || currentHeight <= 0) return;
 
         if (vramBuffer == null ||
                 vramBuffer.getWidth() != currentWidth ||
                 vramBuffer.getHeight() != currentHeight ||
                 vramBuffer.validate(getGraphicsConfiguration()) == VolatileImage.IMAGE_INCOMPATIBLE) {
-
             vramBuffer = getGraphicsConfiguration().createCompatibleVolatileImage(currentWidth, currentHeight);
         }
 
         do {
             if (vramBuffer.validate(getGraphicsConfiguration()) == VolatileImage.IMAGE_RESTORED) {
-                // VRAM 복구 이벤트 발생 시 필요한 처리
+                // 복구 이벤트
             }
 
             Graphics2D d2 = vramBuffer.createGraphics();
@@ -259,15 +273,44 @@ public abstract class Base extends Canvas implements IFrameSize {
 
                 if (!io.load.isLoadEnd()) {
                     renderLoadingScreen(d2);
+                } else if (!useLegacyRendering) {
+                    synchronized (drawCalls) {
+                        renderTargetCalls.addAll(drawCalls);
+                        renderTargetXs.addAll(drawCallXs);
+                        renderTargetYs.addAll(drawCallYs);
+
+                        drawCalls.clear();
+                        drawCallXs.clear();
+                        drawCallYs.clear();
+                    }
+
+                    for (int i = 0; i < renderTargetCalls.size(); i++) {
+                        Call call = renderTargetCalls.get(i);
+                        int x = renderTargetXs.get(i);
+                        int y = renderTargetYs.get(i);
+
+                        if (call != null) {
+                            call.updateCache();
+
+                            VolatileImage buffer = call.getBuffer();
+
+                            if (buffer != null) {
+                                d2.drawImage(buffer, x, y, null);
+                            }
+                        }
+                    }
+
+                    renderTargetCalls.clear();
+                    renderTargetXs.clear();
+                    renderTargetYs.clear();
                 } else {
-                    render(d2);
+                    legacyRender(d2);
                 }
 
                 if (Fw.Debugger.showHitbox) {
                     Fw.Debugger.Internal.renderHitbox(d2);
                 }
-
-                if (console!=null) { console.render(d2); }
+                if (console != null) { console.render(d2); }
 
             } finally {
                 d2.dispose();
@@ -279,7 +322,6 @@ public abstract class Base extends Canvas implements IFrameSize {
             } finally {
                 hwGraphics.dispose();
             }
-
             bufferStrategy.show();
 
         } while (vramBuffer.contentsLost());
@@ -287,7 +329,10 @@ public abstract class Base extends Canvas implements IFrameSize {
 
     public abstract void init(Io io, OperatorManager operators);
     public abstract void update(double dt);
-    public abstract void render(Graphics g);
+    /**
+    * Legacy. You Should be using
+    */
+    public void legacyRender(Graphics g) {};
 
 
     @Override public int getComponentWidth() { return this.getWidth(); }
@@ -334,6 +379,21 @@ public abstract class Base extends Canvas implements IFrameSize {
             loadingComponent.render(g);
         }
     }
+    private void addDrawCall(int x, int y, Call call) {
+        synchronized (drawCalls) {
+            drawCalls.add(call);
+            drawCallXs.add(x);
+            drawCallYs.add(y);
+        }
+    }
+
+    public class Renderer {
+        public void addDrawCall(int x, int y, Call call) {
+            Base.this.addDrawCall(x, y, call);
+        }
+    }
+
+    public GraphicsConfiguration graphicsConfiguration() {return getGraphicsConfiguration();}
 
     @Override
     public java.awt.im.InputMethodRequests getInputMethodRequests() {

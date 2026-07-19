@@ -60,19 +60,15 @@ public abstract class KeyBindingBase {
         KBKey(int code) { this.code = code; }
     }
 
-    // 수정됨: JComponent 대신 Canvas를 받도록 변경
     protected KeyBindingBase(Canvas comp) {
-        // Canvas가 포커스를 먹을 수 있어야 키보드 이벤트를 가져옵니다.
         comp.setFocusable(true);
 
-        // InputMap은 빈 JComponent를 호스트로 삼아 가상으로 생성합니다.
         JComponent dummyHost = new JPanel();
         this.im = new ComponentInputMap(dummyHost);
         this.am = new ActionMap();
 
         build();
 
-        // Canvas의 키 리스너를 통해 가상 InputMap/ActionMap 구조로 전달(Forwarding)합니다.
         comp.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -85,14 +81,12 @@ public abstract class KeyBindingBase {
             }
 
             private void processKeyEvent(KeyEvent e) {
-                // 이벤트를 Swing KeyStroke로 변환
                 KeyStroke stroke = KeyStroke.getKeyStrokeForEvent(e);
                 Object actionKey = im.get(stroke);
 
                 if (actionKey != null) {
                     Action action = am.get(actionKey);
                     if (action != null) {
-                        // Swing 액션을 인위적으로 가동
                         action.actionPerformed(new ActionEvent(comp, ActionEvent.ACTION_PERFORMED, actionKey.toString(), e.getWhen(), e.getModifiersEx()));
                     }
                 }

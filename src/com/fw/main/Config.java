@@ -23,6 +23,7 @@ public class Config {
         this.useKoreanModule = builder.useKoreanModule;
         this.useEncryption = builder.useEncryption;
         this.secretKey = builder.secretKey;
+        //좀 더럽게 짜긴했지만 컴파일도 되고 잘돌아감.
         if (secretKey.length() != 16) {
             System.err.println("Encryption Key is not 16-digit!");
             System.exit(0);
