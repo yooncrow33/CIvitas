@@ -1,7 +1,6 @@
 package com.fw.main;
 
 import com.fw.internal.graphics.object.GraphicsComponent;
-import com.fw.internal.sys.Console;
 import com.fw.internal.sys.input.MouseAtBase;
 import com.fw.main.api.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
@@ -29,7 +28,7 @@ public abstract class Base extends Canvas implements IFrameSize {
     private Thread logicThread;
     private Thread renderThread;
     private volatile boolean running = false;
-    private boolean useLegacyRendering;
+    private boolean useExperimentalRender;
 
     private final Mouse mouse = new Mouse(this);
     public Mouse getMouse() { return mouse; }
@@ -54,7 +53,7 @@ public abstract class Base extends Canvas implements IFrameSize {
 
     private ConsoleCMD consoleCMD = null;
     public ConsoleCMD getConsoleCMD() {return consoleCMD;}
-    private Console console = null;
+    private com.fw.internal.sys.Console console = null;
 
     public Base(Builder builder) {
         if (!Core.isIsSetConfig()) {
@@ -109,9 +108,9 @@ public abstract class Base extends Canvas implements IFrameSize {
         if (builder.integerKey!=null) { Fw.add(builder.integerKey, this); }
         if (builder.stringKey!=null) { Fw.add(builder.stringKey, this); }
         if (builder.consoleUse) {
-            console = new Console(this);
+            console = new com.fw.internal.sys.Console(this);
         }
-        this.useLegacyRendering = builder.useLegacyRendering;
+        this.useExperimentalRender = builder.useExperimentalRender;
 
         mouseAtBase = new MouseAtBase(this);
         init(io, operatorManager);
@@ -120,6 +119,8 @@ public abstract class Base extends Canvas implements IFrameSize {
 
         new Thread(() -> {
             io.load.load();
+            setConsole(new ConsoleInit());
+            setMouse(getMouse());
         }).start();
     }
 
@@ -127,7 +128,7 @@ public abstract class Base extends Canvas implements IFrameSize {
         String stringKey;
         Integer integerKey;
         boolean consoleUse;
-        boolean useLegacyRendering;
+        boolean useExperimentalRender;
 
         public Builder setStringKey(String stringKey) {
             this.stringKey = stringKey;
@@ -144,8 +145,8 @@ public abstract class Base extends Canvas implements IFrameSize {
             return this;
         }
 
-        public Builder setUseLegacyRendering(boolean b) {
-            this.useLegacyRendering = b;
+        public Builder setUseExperimentalRender(boolean b) {
+            this.useExperimentalRender = b;
             return this;
         }
     }
@@ -159,6 +160,12 @@ public abstract class Base extends Canvas implements IFrameSize {
 
         public int x() { return base.getMouseX(); }
         public int y() { return base.getMouseY(); }
+        public void registerMouseInterface(MouseInterface mouseInterface) { mouseAtBase.registerInterface(mouseInterface); }
+    }
+
+    private class ConsoleInit {
+        private void registerConsoleCMD(ConsoleCMD CMD) { if(consoleCMD!=null) {
+            System.err.println("ConsoleCMD is already init!"); return;} consoleCMD = CMD;}
     }
 
     private void launch() {
@@ -273,7 +280,7 @@ public abstract class Base extends Canvas implements IFrameSize {
 
                 if (!io.load.isLoadEnd()) {
                     renderLoadingScreen(d2);
-                } else if (!useLegacyRendering) {
+                } else if (useExperimentalRender) {
                     synchronized (drawCalls) {
                         renderTargetCalls.addAll(drawCalls);
                         renderTargetXs.addAll(drawCallXs);
@@ -304,7 +311,7 @@ public abstract class Base extends Canvas implements IFrameSize {
                     renderTargetXs.clear();
                     renderTargetYs.clear();
                 } else {
-                    legacyRender(d2);
+                    render(d2);
                 }
 
                 if (Fw.Debugger.showHitbox) {
@@ -329,20 +336,21 @@ public abstract class Base extends Canvas implements IFrameSize {
 
     public abstract void init(Io io, OperatorManager operators);
     public abstract void update(double dt);
-    /**
-    * Legacy. You Should be using
-    */
-    public void legacyRender(Graphics g) {};
+    public abstract void render(Graphics g);
+    public void setMouse(Mouse mouse) {}
+    public void setConsole(ConsoleInit consoleInit) {}
 
+    /**
+     * It's uses buffer cashing. but, It's too experimental. Prone to race conditions.
+     * It's slower than default render! so this is experimental function.
+     */
+    public void experimentalRendering(Renderer r) {}
 
     @Override public int getComponentWidth() { return this.getWidth(); }
     @Override public int getComponentHeight() { return this.getHeight(); }
 
     public int getMouseX() { return viewMetrics.getVirtualMouseX(); }
     public int getMouseY() { return viewMetrics.getVirtualMouseY(); }
-    public void registerMouseInterface(MouseInterface mouseInterface) { mouseAtBase.registerInterface(mouseInterface); }
-    public void registerConsoleCMD(ConsoleCMD consoleCMD) { if(this.consoleCMD!=null) {
-        System.err.println("ConsoleCMD is already init!"); return;} this.consoleCMD = consoleCMD;}
 
     public void save() {
         io.save.save();

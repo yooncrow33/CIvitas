@@ -12,6 +12,7 @@ import com.fw.main.utils.input.mouse.FwMouseAPI;
 import com.fw.main.utils.input.mouse.MouseInterface;
 
 import java.awt.*;
+import java.util.List;
 import java.util.Properties;
 
 public class Test extends Base {
@@ -33,7 +34,8 @@ public class Test extends Base {
         super(new Builder().
                 setIntegerKey(1).
                 setStringKey("1").
-                setUseConsole(true)
+                setUseConsole(true).
+                setUseExperimentalRender(false)
         );
         ko.setFocused(true);
         ko.registerKoreanObjectEventListener(new KoreanObjectEventListener() {
@@ -51,8 +53,8 @@ public class Test extends Base {
 
         registerConsoleCMD(new ConsoleCMD() {
             @Override
-            public void CMD(String rawInput) {
-                //CMD.......
+            public void CMD(List<String> args) {
+
             }
         });
 
@@ -77,41 +79,6 @@ public class Test extends Base {
             @Override
             public void initLoad(Properties p) {
                 aFloat = (float) Math.random();
-            }
-        });
-
-        registerMouseInterface(new MouseInterface() {
-            @Override
-            public void mouseClicked(FwMouseAPI e) {
-                System.out.println("Click!");
-                System.out.println("from :" + e.getButton());
-            }
-
-            @Override
-            public void mousePressed(FwMouseAPI e) {
-                if(e.isDoubleClick()) {
-                    System.out.println("Double CLick!");
-                }
-            }
-
-            @Override
-            public void mouseReleased(FwMouseAPI e) {
-                //other implements.....
-            }
-
-            @Override
-            public void mouseEntered(FwMouseAPI e) {
-
-            }
-
-            @Override
-            public void mouseExited(FwMouseAPI e) {
-
-            }
-
-            @Override
-            public void mouseWheelMoved(FwMouseAPI e) {
-
             }
         });
     }

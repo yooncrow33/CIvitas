@@ -6,6 +6,9 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 
+/**
+ * It doesn't work. (Base and Empty Base is use Canvas.
+ */
 public abstract class LegacyKeyBindingBase {
 
     public KeyBindingBaseOption keyBindingBaseOption;

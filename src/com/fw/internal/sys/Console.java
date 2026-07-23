@@ -9,6 +9,8 @@ import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class Console {
@@ -39,7 +41,7 @@ public class Console {
         text.registerKoreanObjectEventListener(new KoreanObjectEventListener() {
             @Override
             public void enter() {
-                tempEnter();
+                enterAtConsole();
             }
         });
         this.base = comp;
@@ -68,31 +70,59 @@ public class Console {
         }
     }
 
-    public void CMD(String cmd) {
+    public void CMD(List<String> cmd) {
         if (base.getConsoleCMD()!=null) {
             base.getConsoleCMD().CMD(cmd);
         }
     }
 
-    public void tempEnter() {
+    public void enterAtConsole() {
         String input = text.getInputText().trim();
-        if (!input.isEmpty()) {
-            if (input.equals("up") || input.equals("down")) {
-                if (input.equals("up")) {
-                    scrollUp();return;
-                } else {
-                    scrollDown();return;
-                }
-            }
-            logs.add(String.format("[%tT] %s%s", System.currentTimeMillis(), LogType.ROOT.get(), input));
-            scrollOffset = 0;
-            CMD(input);
+        if (input.isEmpty()) {text.clear();return;}
+        if (hasConsecutiveSpaces(input)) {
+            addLog(LogType.ERROR, "multiple consecutive spaces detected.");
+            return;
         }
+
+        List<String> args;
+        args = parseBuffer(input, false);
+
+        if (args.get(0) != null && args.get(0).equals("sys")) {
+            internalCMD(args);
+            return;
+        }
+
+        logs.add(String.format("[%tT] %s%s", System.currentTimeMillis(), LogType.ROOT.get(), input));
+        scrollOffset = 0;
+        CMD(args);
         text.clear();
     }
 
+    public boolean hasConsecutiveSpaces(String sb) {
+        if (sb == null) {
+            return false;
+        }
+        return sb.contains("  ");
+    }
+
+    public List<String> parseBuffer(String sb, boolean preserveTrailingEmpty) {
+        if (sb == null) {
+            return Collections.emptyList();
+        }
+
+        String input = sb;
+        if (input.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int limit = preserveTrailingEmpty ? -1 : 0;
+        String[] parsedArray = input.split(" ", limit);
+
+        return Arrays.asList(parsedArray);
+    }
+
     public void addLog(LogType type, String message) {
-        logs.add(type.get() + message);
+        logs.add(String.format("[%tT] %s%s", System.currentTimeMillis(), type.get() + message));
         scrollOffset = 0;
     }
 
@@ -165,5 +195,10 @@ public class Console {
                 }
             }
         });
+    }
+
+    public void internalCMD(List<String> args) {
+        if (!args.get(0).equals("sys")) {return;} //쓸대는 없지만 ㅎㅎ 그냥 불안해해서.
+
     }
 }
