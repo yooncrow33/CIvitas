@@ -11,6 +11,8 @@ import com.fw.main.api.sys.ConsoleCMD;
 import com.fw.main.api.sys.graphics.Call;
 import com.fw.main.utils.input.korean.KoreanModule;
 import com.fw.main.utils.input.mouse.MouseInterface;
+import com.fw.main.utils.platform.system.console.Console;
+import com.fw.main.utils.platform.system.console.autoComplete.AutoCompleteManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -31,7 +33,7 @@ public abstract class Base extends Canvas implements IFrameSize {
     private boolean useExperimentalRender;
 
     private final Mouse mouse = new Mouse(this);
-    public Mouse getMouse() { return mouse; }
+    public final Mouse getMouse() { return mouse; }
     private final ViewMetrics viewMetrics;
     protected final Io io = new Io();
     private final OperatorManager operatorManager = new OperatorManager();
@@ -53,7 +55,7 @@ public abstract class Base extends Canvas implements IFrameSize {
 
     private ConsoleCMD consoleCMD = null;
     public ConsoleCMD getConsoleCMD() {return consoleCMD;}
-    private com.fw.internal.sys.Console console = null;
+    private Console console = null;
 
     public Base(Builder builder) {
         if (!Core.isIsSetConfig()) {
@@ -108,7 +110,7 @@ public abstract class Base extends Canvas implements IFrameSize {
         if (builder.integerKey!=null) { Fw.add(builder.integerKey, this); }
         if (builder.stringKey!=null) { Fw.add(builder.stringKey, this); }
         if (builder.consoleUse) {
-            console = new com.fw.internal.sys.Console(this);
+            console = new Console(this);
         }
         this.useExperimentalRender = builder.useExperimentalRender;
 
@@ -163,9 +165,10 @@ public abstract class Base extends Canvas implements IFrameSize {
         public void registerMouseInterface(MouseInterface mouseInterface) { mouseAtBase.registerInterface(mouseInterface); }
     }
 
-    private class ConsoleInit {
-        private void registerConsoleCMD(ConsoleCMD CMD) { if(consoleCMD!=null) {
+    public class ConsoleInit {
+        public void registerConsoleCMD(ConsoleCMD CMD) { if(consoleCMD!=null) {
             System.err.println("ConsoleCMD is already init!"); return;} consoleCMD = CMD;}
+        public AutoCompleteManager getAuto() {return console.getAuto();}
     }
 
     private void launch() {
@@ -346,13 +349,13 @@ public abstract class Base extends Canvas implements IFrameSize {
      */
     public void experimentalRendering(Renderer r) {}
 
-    @Override public int getComponentWidth() { return this.getWidth(); }
-    @Override public int getComponentHeight() { return this.getHeight(); }
+    @Override public final int getComponentWidth() { return this.getWidth(); }
+    @Override public final int getComponentHeight() { return this.getHeight(); }
 
-    public int getMouseX() { return viewMetrics.getVirtualMouseX(); }
-    public int getMouseY() { return viewMetrics.getVirtualMouseY(); }
+    public final int getMouseX() { return viewMetrics.getVirtualMouseX(); }
+    public final int getMouseY() { return viewMetrics.getVirtualMouseY(); }
 
-    public void save() {
+    public final void save() {
         io.save.save();
     }
 
@@ -404,7 +407,7 @@ public abstract class Base extends Canvas implements IFrameSize {
     public GraphicsConfiguration graphicsConfiguration() {return getGraphicsConfiguration();}
 
     @Override
-    public java.awt.im.InputMethodRequests getInputMethodRequests() {
+    public final java.awt.im.InputMethodRequests getInputMethodRequests() {
         return new java.awt.im.InputMethodRequests() {
             @Override public java.awt.font.TextHitInfo getLocationOffset(int x, int y) { return null; }
             @Override public java.awt.Rectangle getTextLocation(java.awt.font.TextHitInfo offset) {

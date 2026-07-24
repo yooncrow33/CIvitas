@@ -1,18 +1,13 @@
 package com.test;
 
-import com.fw.internal.sys.Console;
 import com.fw.main.api.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.main.*;
 import com.fw.main.api.io.IoInterface;
-import com.fw.main.api.sys.ConsoleCMD;
 import com.fw.main.utils.input.korean.KoreanObject;
 import com.fw.main.utils.input.korean.KoreanObjectEventListener;
-import com.fw.main.utils.input.mouse.FwMouseAPI;
-import com.fw.main.utils.input.mouse.MouseInterface;
 
 import java.awt.*;
-import java.util.List;
 import java.util.Properties;
 
 public class Test extends Base {
@@ -44,19 +39,25 @@ public class Test extends Base {
                 System.out.println(ko.getInputText());
                 ko.clear();
             }
+            @Override
+            public void tab() {
+
+            }
         });
+    }
+
+    @Override
+    public void setConsole(Base.ConsoleInit c) {
+        c.getAuto().suggestAt(0,"sys");
+        c.getAuto().suggestAt(1,"copy").whenToken(0).is("sys");
+        c.getAuto().suggestAt(1,"up").whenToken(0).is("sys");
+        c.getAuto().suggestAt(1,"down").whenToken(0).is("sys");
+
     }
 
     @Override
     public void init(Io io, OperatorManager operatorManager) {
         new TestBindingLegacy(this);
-
-        registerConsoleCMD(new ConsoleCMD() {
-            @Override
-            public void CMD(List<String> args) {
-
-            }
-        });
 
         operatorManager.exitOperatorPack.addOperator(new Operator() {
             @Override
@@ -81,7 +82,10 @@ public class Test extends Base {
                 aFloat = (float) Math.random();
             }
         });
+
     }
+
+
 
     @Override
     public void update(double dt) {

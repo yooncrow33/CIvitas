@@ -31,6 +31,13 @@ public class KoreanObject {
         return textBuffer.toString() + composingText;
     }
 
+    public void setInputText(String newText) {
+        clear(); // textBuffer 초기화 및 composingText 비우기
+        if (newText != null) {
+            textBuffer.append(newText);
+        }
+    }
+
     public KoreanObject() {
         KoreanManager.koreanObjectPut(this);
     }
