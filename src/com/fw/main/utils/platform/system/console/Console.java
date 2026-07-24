@@ -1,7 +1,9 @@
 package com.fw.main.utils.platform.system.console;
 
+import com.fw.internal.utils.Internal;
 import com.fw.main.Base;
 import com.fw.main.Core;
+import com.fw.main.api.io.IoInterface;
 import com.fw.main.utils.input.korean.KoreanObject;
 import com.fw.main.utils.input.korean.KoreanObjectEventListener;
 import com.fw.main.utils.platform.system.console.autoComplete.AutoCompleteManager;
@@ -9,10 +11,9 @@ import com.fw.main.utils.platform.system.console.autoComplete.AutoCompleteManage
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Console {
     public enum LogType {
@@ -47,11 +48,21 @@ public class Console {
 
     private static final BasicStroke STROKE_BORDER = new BasicStroke(3f);
 
+    private static final Font FONT_WARNING = new Font("Consolas", Font.BOLD, 12);
+    private static final Color COLOR_WARN_BG = new Color(50, 20, 20, 230);
+    private static final Color COLOR_WARN_BORDER = new Color(220, 80, 80);
+    private static final Color COLOR_WARN_TEXT = new Color(255, 180, 180);
+
     private boolean isOpen = false;
 
     private final List<String> logs = new ArrayList<>();
     private int scrollOffset = 0;
     private int maxLines = 10;
+    @Internal
+    private final QuickPutManager quickPutManager = new QuickPutManager();
+    public QuickPutManager getQuickPutManager() {
+        return quickPutManager;
+    }
     private AutoCompleteManager autoCompleteManager = new AutoCompleteManager();
 
     private final KoreanObject text;
@@ -75,25 +86,45 @@ public class Console {
 
         comp.setFocusable(true);
         initBinding();
+
+        getAuto().suggestAt(0,"sys");
+        getAuto().suggestAt(1,"copy").whenToken(0).is("sys");
+        getAuto().suggestAt(1,"drct").whenToken(0).is("sys");
+        getAuto().suggestAt(1,"quickput").whenToken(0).is("sys");
+        getAuto().suggestAt(2,"10").whenToken(0).is("sys").
+                whenToken(1).is("copy");
+        getAuto().suggestAt(2,"10").whenToken(0).is("sys").
+                whenToken(1).is("drct");
+        getAuto().suggestAt(2,"put").whenToken(0).is("sys")
+                .whenToken(1).is("quickput");
+        getAuto().suggestAt(2,"delete").whenToken(0).is("sys")
+                .whenToken(1).is("quickput");
+        getAuto().suggestAt(3,"key").whenToken(0).is("sys")
+                .whenToken(1).is("quickput").whenToken(2).is("delete");
+        getAuto().suggestAt(3,"key").whenToken(0).is("sys")
+                .whenToken(1).is("quickput").whenToken(2).is("put");
+        getAuto().suggestAt(4,"CMD").whenToken(0).is("sys")
+                .whenToken(1).is("quickput").whenToken(2).is("put").
+                whenToken(3).is("key");
+        getAuto().suggestAt(2,"clear").whenToken(0).is("sys")
+                .whenToken(1).is("quickput");
+        getAuto().suggestAt(1,"up").whenToken(0).is("sys");
+        getAuto().suggestAt(1,"down").whenToken(0).is("sys");
     }
 
     public boolean isOpen() { return isOpen; }
-    public void toggle() { isOpen = !isOpen; text.setFocused(!text.isFocused());  }
+    public void toggle() { isOpen = !isOpen; text.setFocused(!text.isFocused()); text.clear(); }
 
     public void setMaxLines(int maxLines) {
         this.maxLines = Math.max(1, maxLines);
     }
-
-    public void scrollUp() {
-        if (logs.size() > maxLines && scrollOffset < logs.size() - maxLines) {
-            scrollOffset++;
-        }
+    public void scrollUp(int lines) {
+        int maxOffset = Math.max(0, logs.size() - maxLines);
+        scrollOffset = Math.min(scrollOffset + lines, maxOffset);
     }
 
-    public void scrollDown() {
-        if (scrollOffset > 0) {
-            scrollOffset--;
-        }
+    public void scrollDown(int lines) {
+        scrollOffset = Math.max(0, scrollOffset - lines);
     }
 
     public void CMD(List<String> cmd) {
@@ -104,11 +135,16 @@ public class Console {
 
     public AutoCompleteManager getAuto() { return autoCompleteManager; }
 
+    @Internal
     public void enterAtConsole() {
         String input = text.getInputText().trim();
         if (input.isEmpty()) {text.clear();return;}
         if (hasConsecutiveSpaces(input)) {
             addLog(LogType.ERROR, "multiple consecutive spaces detected.");
+            return;
+        }
+        if (hasSyntaxError(input)) {
+            addLog(LogType.ERROR, "Unclosed quotes detected in command.");
             return;
         }
 
@@ -126,48 +162,96 @@ public class Console {
         text.clear();
     }
 
+    @Internal
     public boolean hasConsecutiveSpaces(String sb) {
         if (sb == null) {
             return false;
         }
-        return sb.contains("  ");
+        boolean inQuotes = false;
+        for (int i = 0; i < sb.length() - 1; i++) {
+            char c = sb.charAt(i);
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            }
+            if (!inQuotes && c == ' ' && sb.charAt(i + 1) == ' ') {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public List<String> parseBuffer(String sb, boolean preserveTrailingEmpty) {
+    @Internal
+    public boolean hasSyntaxError(String sb) {
         if (sb == null) {
+            return false;
+        }
+
+        boolean inQuotes = false;
+        for (int i = 0; i < sb.length(); i++) {
+            if (sb.charAt(i) == '"') {
+                inQuotes = !inQuotes; // 따옴표 토글
+            }
+        }
+
+        // 루프가 끝났는데 inQuotes가 true면 따옴표가 닫히지 않은 것
+        if (inQuotes) {
+            return true;
+        }
+
+        return false;
+    }
+
+    @Internal
+    public List<String> parseBuffer(String sb, boolean preserveTrailingEmpty) {
+        if (sb == null || sb.trim().isEmpty()) {
             return Collections.emptyList();
         }
 
-        String input = sb;
-        if (input.trim().isEmpty()) {
-            return Collections.emptyList();
+        List<String> result = new ArrayList<>();
+        StringBuilder currentToken = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < sb.length(); i++) {
+            char c = sb.charAt(i);
+
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ' ' && !inQuotes) {
+                if (currentToken.length() > 0) {
+                    result.add(currentToken.toString());
+                    currentToken.setLength(0);
+                }
+            } else {
+                currentToken.append(c);
+            }
         }
 
-        int limit = preserveTrailingEmpty ? -1 : 0;
-        String[] parsedArray = input.split(" ", limit);
+        if (currentToken.length() > 0) {
+            result.add(currentToken.toString());
+        } else if (preserveTrailingEmpty && (sb.endsWith(" ") || sb.endsWith("\""))) {
+            result.add("");
+        }
 
-        return Arrays.asList(parsedArray);
+        return result;
     }
 
     public void addLog(LogType type, String message) {
-        logs.add(String.format("[%tT] %s%s", System.currentTimeMillis(), type.get() + message));
+        logs.add(String.format("[%tT] %s%s", System.currentTimeMillis(), type.get(), message));
         scrollOffset = 0;
     }
 
+    @Internal
     public void render(Graphics g) {
         if (!isOpen || g == null) return;
         Graphics2D g2 = (Graphics2D) g;
 
-        // 1. 콘솔 배경 상자 렌더링
         g2.setColor(COLOR_BG);
         g2.fillRect(0, 0, 1920, 340);
 
-        // 2. 하단 경계선 렌더링
         g2.setColor(COLOR_BORDER);
         g2.setStroke(STROKE_BORDER);
         g2.drawLine(0, 340, 1920, 340);
 
-        // 3. 로그 메시지 렌더링
         int lineHeight = 25;
         int startY = 40;
         int totalLogs = logs.size();
@@ -188,20 +272,17 @@ public class Console {
 
             int currentY = startY + (lineCount * lineHeight);
 
-            // 로그 번호 표시
             g2.setFont(FONT_LOG_INDEX);
             g2.setColor(COLOR_GRAY_TEXT);
-            g2.drawString(String.format("#%d", i + 1), 1750, currentY);
+            g2.drawString(String.format("#%d", i), 1750, currentY);
 
             lineCount++;
         }
 
-        // 전체 라인 수 표시
         g2.setFont(FONT_LOG_INDEX);
         g2.setColor(COLOR_GRAY_TEXT);
         g2.drawString(String.format("Lines: %d/%d", endIndex, totalLogs), 1820, 30);
 
-        // 4. 입력 프롬프트 & 커서 렌더링
         int promptX = 30;
         int promptY = 310;
 
@@ -220,14 +301,12 @@ public class Console {
         String cursor = (System.currentTimeMillis() % 1000 > 300) ? "_" : "";
         g2.drawString(cursor, cursorX, cursorY);
 
-        // 5. 추천어 데이터 조회
-        List<String> allCandidates = getAllCandidates();      // [왼쪽 아래용]
-        List<String> suggestions = getCurrentSuggestions();  // [오른쪽 아래용]
+        List<String> allCandidates = getAllCandidates();
+        List<String> suggestions = getCurrentSuggestions();
 
         int boxPadding = 8;
         int itemHeight = 20;
 
-        // [A] 커서 왼쪽 아래: 이 위치에 들어올 수 있는 '모든 후보 목록' (항상 나열)
         if (!allCandidates.isEmpty()) {
             int maxWordWidth = 0;
             for (String cand : allCandidates) {
@@ -236,17 +315,14 @@ public class Console {
             int panelWidth = Math.max(maxWordWidth + (boxPadding * 2), 80);
             int panelHeight = (allCandidates.size() * itemHeight) + (boxPadding * 2);
 
-            // 📍 커서 X좌표보다 '왼쪽'으로 배치
             int leftPanelX = cursorX - panelWidth - 10;
             int leftPanelY = cursorY + 15;
 
-            // 반투명 배경 & 테두리
             g2.setColor(COLOR_PANEL_BG);
             g2.fillRect(leftPanelX, leftPanelY, panelWidth, panelHeight);
             g2.setColor(COLOR_PANEL_BORDER);
             g2.drawRect(leftPanelX, leftPanelY, panelWidth, panelHeight);
 
-            // 후보 단어 나열 (회색/PLAIN)
             g2.setFont(FONT_SUGGEST_SUB);
             g2.setColor(COLOR_CANDIDATES_TEXT);
             for (int idx = 0; idx < allCandidates.size(); idx++) {
@@ -256,7 +332,6 @@ public class Console {
             }
         }
 
-        // [B] 커서 바로 오른쪽: 타이핑 시 활성화된 자동완성 목록 패널
         if (!suggestions.isEmpty()) {
             int maxWordWidth = 0;
             for (String sug : suggestions) {
@@ -265,17 +340,14 @@ public class Console {
             int panelWidth = maxWordWidth + (boxPadding * 2);
             int panelHeight = (suggestions.size() * itemHeight) + (boxPadding * 2);
 
-            // 📍 커서 X좌표보다 '오른쪽'으로 배치
             int rightPanelX = cursorX + 10;
             int rightPanelY = cursorY + 15;
 
-            // 반투명 배경 & 테두리
             g2.setColor(COLOR_PANEL_BG);
             g2.fillRect(rightPanelX, rightPanelY, panelWidth, panelHeight);
             g2.setColor(COLOR_PANEL_BORDER);
             g2.drawRect(rightPanelX, rightPanelY, panelWidth, panelHeight);
 
-            // 활성화 단어 나열 (1순위 BOLD 흰색, 2순위~ 회색)
             for (int idx = 0; idx < suggestions.size(); idx++) {
                 String suggestionWord = suggestions.get(idx);
                 int textY = rightPanelY + boxPadding + (idx + 1) * itemHeight - 4;
@@ -289,6 +361,50 @@ public class Console {
                 }
                 g2.drawString(suggestionWord, rightPanelX + boxPadding, textY);
             }
+        }
+        g2.setFont(FONT_WARNING);
+        FontMetrics fmWarn = g2.getFontMetrics(FONT_WARNING);
+
+        int warnBoxHeight = 22;
+        int warnBoxY = cursorY - 30; // 기준 Y 위치 (첫 번째 박스)
+
+        // 1. 띄어쓰기 오류일 때
+        if (hasConsecutiveSpaces(currentInput)) {
+            String msg = "Consecutive spaces detected";
+            int warnWidth = fmWarn.stringWidth(msg) + 12;
+            int warnX = cursorX + 10;
+
+            if (warnX + warnWidth > 1900) {
+                warnX = 1900 - warnWidth;
+            }
+
+            g2.setColor(COLOR_WARN_BG);
+            g2.fillRect(warnX, warnBoxY, warnWidth, warnBoxHeight);
+            g2.setColor(COLOR_WARN_BORDER);
+            g2.drawRect(warnX, warnBoxY, warnWidth, warnBoxHeight);
+
+            g2.setColor(COLOR_WARN_TEXT);
+            g2.drawString(msg, warnX + 6, warnBoxY + 15);
+
+            warnBoxY -= (warnBoxHeight + 4);
+        }
+
+        if (hasSyntaxError(currentInput)) {
+            String msg = "Unclosed quotes (\")";
+            int warnWidth = fmWarn.stringWidth(msg) + 12;
+            int warnX = cursorX + 10;
+
+            if (warnX + warnWidth > 1900) {
+                warnX = 1900 - warnWidth;
+            }
+
+            g2.setColor(COLOR_WARN_BG);
+            g2.fillRect(warnX, warnBoxY, warnWidth, warnBoxHeight);
+            g2.setColor(COLOR_WARN_BORDER);
+            g2.drawRect(warnX, warnBoxY, warnWidth, warnBoxHeight);
+
+            g2.setColor(COLOR_WARN_TEXT);
+            g2.drawString(msg, warnX + 6, warnBoxY + 15);
         }
     }
 
@@ -314,8 +430,170 @@ public class Console {
         });
     }
 
+
     public void internalCMD(List<String> args) {
-        if (!args.get(0).equals("sys")) {return;}
+        if (args == null || args.size() < 2 || !"sys".equals(args.get(0))) {
+            return;
+        }
+
+        switch (args.get(1)) {
+            case "up" -> {
+                if (args.size() < 3) {
+                    scrollUp(1);
+                } else {
+                    int value;
+                    try {
+                        value = Integer.parseInt(args.get(2));
+                    } catch (NumberFormatException e) {
+                        addLog(LogType.ERROR, "value is not a number!");
+                        return;
+                    }
+                    scrollUp(value);
+                }
+            }
+            case "down" -> {
+                if (args.size() < 3) {
+                    scrollDown(1);
+                } else {
+                    int value;
+                    try {
+                        value = Integer.parseInt(args.get(2));
+                    } catch (NumberFormatException e) {
+                        addLog(LogType.ERROR, "value is not a number!");
+                        return;
+                    }
+                    scrollDown(value);
+                }
+            }
+            case "drct" -> {
+                if (args.size() < 3) {
+                    addLog(LogType.ERROR,"line is null!");
+                    return;
+                }
+                int value;
+                try {
+                    value = Integer.parseInt(args.get(2));
+                } catch (NumberFormatException e) {
+                    addLog(LogType.ERROR, "value is not a number!");
+                    return;
+                }
+
+                if (value < 0 || value >= logs.size()) {
+                    addLog(LogType.ERROR, "out of line range!");
+                    return;
+                }
+
+                int targetOffset = logs.size() - value;
+                int maxOffset = Math.max(0, logs.size() - maxLines);
+
+                scrollOffset = Math.min(targetOffset, maxOffset);
+                text.clear();
+            }
+            case "copy" -> {
+                if (args.size() < 3) {
+                    addLog(LogType.ERROR,"line is null!");
+                    return;
+                }
+                int value;
+                try {
+                    value = Integer.parseInt(args.get(2));
+                } catch (NumberFormatException e) {
+                    addLog(LogType.ERROR, "value is not a number!");
+                    return;
+                }
+                if (value < 0 || value >= logs.size()) {
+                    addLog(LogType.ERROR, "out of line range!");
+                    return;
+                }
+                text.setInputText(logs.get(value).substring(17));
+            }
+            case "quickput" -> {
+                if (args.size() < 3) {
+                    addLog(LogType.ERROR,"3rd token is null!");
+                    return;
+                }
+                switch (args.get(2)) {
+                    case "put" -> {
+                        if (args.size() < 4) {
+                            addLog(LogType.ERROR,"key is null!");
+                            return;
+                        }
+                        if (args.size() < 5) {
+                            addLog(LogType.ERROR,"cmd is null!");
+                            return;
+                        }
+                        if (args.size() > 5) {
+                            addLog(LogType.ERROR,"should be using \"\" !");
+                            return;
+                        }
+                        getQuickPutManager().map.put(args.get(3),args.get(4));
+                        text.clear();
+                    }
+                    case "delete" -> {
+                        if (args.size() < 4) {
+                            addLog(LogType.ERROR,"key is null!");
+                            return;
+                        }
+                        getQuickPutManager().map.remove(args.get(3));
+                        text.clear();
+                    }
+                    case "clear" -> {
+                        getQuickPutManager().map.clear();
+                        text.clear();
+                    }
+                }
+            }
+            default -> {
+                List<Map.Entry<String, String>> entryList = new ArrayList<>(getQuickPutManager().map.entrySet());
+                for (int i = 0; i < entryList.size(); i++) {
+                    Map.Entry<String, String> entry = entryList.get(i);
+                    String token = args.get(1);
+                    if (token.equals(entry.getKey())) {
+                        text.setInputText(entry.getValue());
+                    }
+                }
+            }
+        }
+    }
+
+    @Internal
+    public class QuickPutManager implements IoInterface {
+        private Map<String, String> map = new ConcurrentHashMap<>();
+
+        @Override
+        public void save(Properties p) {
+            List<Map.Entry<String, String>> entryList = new ArrayList<>(map.entrySet());
+
+            p.setProperty("count", String.valueOf(entryList.size()));
+
+            for (int i = 0; i < entryList.size(); i++) {
+                Map.Entry<String, String> entry = entryList.get(i);
+                String prefix = "q" + i + "_";
+
+                p.setProperty(prefix + "key", entry.getKey());
+                p.setProperty(prefix + "cmd", entry.getValue());
+            }
+        }
+
+        @Override
+        public void load(Properties p) {
+            int count = Integer.parseInt(p.getProperty("count", "0"));
+            Map<String, String> loadedMap = new ConcurrentHashMap<>();
+
+            for (int i = 0; i < count; i++) {
+                String prefix = "q" + i + "_";
+                String key = p.getProperty(prefix + "key");
+                String cmd = p.getProperty(prefix + "cmd");
+
+                if (key != null && cmd != null) {
+                    loadedMap.put(key, cmd);
+                }
+            }
+
+            this.map = loadedMap;
+        }
+
+        @Override public void initLoad(Properties p) { }
     }
 
     public void handleTabCompletion() {
@@ -326,7 +604,6 @@ public class Console {
 
         String currentToken = currentTokens.get(currentTokens.size() - 1);
 
-        // 글자가 없는 공백 토큰이면 TAB을 눌러도 자동완성 안 함
         if (currentToken.isEmpty()) return;
 
         List<String> candidates = autoCompleteManager.getCandidates(currentTokens, currentToken);
@@ -341,7 +618,6 @@ public class Console {
         }
     }
 
-    // [오른쪽 아래용] 타이핑 중 활성화된 추천어 목록
     public List<String> getCurrentSuggestions() {
         String inputText = text.getInputText();
         List<String> currentTokens = parseBuffer(inputText, true);
@@ -352,7 +628,6 @@ public class Console {
         return autoCompleteManager.getCandidates(currentTokens, currentToken);
     }
 
-    // [왼쪽 아래용] 조건만 만족하는 전체 후보 목록
     public List<String> getAllCandidates() {
         String inputText = text.getInputText();
         List<String> currentTokens = parseBuffer(inputText, true);

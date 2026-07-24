@@ -17,7 +17,7 @@ public class DynamicLoadObject {
     private final String fullPath;
     private final Dynamic interfaceObject;
 
-    private DynamicLoadObject(String fullPath, Dynamic dynamic) {
+    public DynamicLoadObject(String fullPath, Dynamic dynamic) {
         this.fullPath = fullPath;
         interfaceObject = dynamic;
     }

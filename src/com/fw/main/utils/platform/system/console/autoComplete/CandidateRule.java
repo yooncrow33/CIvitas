@@ -23,13 +23,12 @@ public class CandidateRule {
         return candidateValue;
     }
 
-    // 모든 조건을 만족해야 이 후보가 활성화됨
     public boolean isSatisfied(List<String> currentTokens) {
         for (Condition condition : conditions) {
             if (!condition.matches(currentTokens)) {
                 return false;
             }
         }
-        return true; // 조건이 없거나 모두 만족하면 true
+        return true;
     }
 }

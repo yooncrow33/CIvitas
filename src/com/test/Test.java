@@ -1,5 +1,7 @@
 package com.test;
 
+import com.fw.main.api.io.Dynamic;
+import com.fw.main.api.io.DynamicLoadObject;
 import com.fw.main.api.io.Io;
 import com.fw.internal.sys.operator.OperatorManager;
 import com.fw.main.*;
@@ -16,12 +18,12 @@ public class Test extends Base {
 
     static {
         Core.setConfig(new
-                Config.Builder("projectName"). // = folder name.
+                Config.Builder("CivitasTest"). // = folder name.
                 setWindowWidth(1280).
                 setWindowHeight(720).
                 setUseKoreanModule(true).
                 setEncryptionKey("keyforencryption").
-                setUseEncryption(true).build()
+                setUseEncryption(false).build()
         );
     }
 
@@ -48,10 +50,6 @@ public class Test extends Base {
 
     @Override
     public void setConsole(Base.ConsoleInit c) {
-        c.getAuto().suggestAt(0,"sys");
-        c.getAuto().suggestAt(1,"copy").whenToken(0).is("sys");
-        c.getAuto().suggestAt(1,"up").whenToken(0).is("sys");
-        c.getAuto().suggestAt(1,"down").whenToken(0).is("sys");
 
     }
 
@@ -82,6 +80,13 @@ public class Test extends Base {
                 aFloat = (float) Math.random();
             }
         });
+
+        new DynamicLoadObject("full path....", new Dynamic() {
+            @Override
+            public void load(Properties p) {
+                //loads...
+            }
+        }).launch();
 
     }
 

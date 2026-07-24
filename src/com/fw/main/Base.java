@@ -120,9 +120,10 @@ public abstract class Base extends Canvas implements IFrameSize {
         launch();
 
         new Thread(() -> {
-            io.load.load();
             setConsole(new ConsoleInit());
             setMouse(getMouse());
+            if (console!=null) {io.addIoObject("quickputsystem",console.getQuickPutManager());}
+            io.load.load();
         }).start();
     }
 
